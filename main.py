@@ -10,6 +10,10 @@ def buat_klip_otomatis(url_video: str, mulai_detik: int = 15, durasi: int = 45, 
         'outtmpl': temp_video,
         'quiet': True
     }
+
+    if os.path.exists("cookies.txt"):
+        ydl_opts['cookiefile'] = "cookies.txt"
+
     print(f"Mengunduh video dari: {url_video}...")
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url_video])
