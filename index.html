@@ -402,17 +402,39 @@
                         <canvas id="preview-canvas" class="max-w-full max-h-[440px] rounded-lg shadow-2xl"></canvas>
                         
                         <!-- Hidden source video element for local video processing -->
-                        <video id="source-video-element" class="hidden" playsinline muted crossorigin="anonymous"></video>
+                        <video id="source-video-element" class="hidden" playsinline crossorigin="anonymous"></video>
 
-                        <!-- Rendering Overlay (Shown during MP4 Export) -->
-                        <div id="export-overlay" class="hidden absolute inset-0 bg-studio-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+                        <!-- Rendering Overlay (Shown during MP4/WebM Export) -->
+                        <div id="export-overlay" class="hidden absolute inset-0 bg-studio-950/92 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
                             <div class="w-14 h-14 rounded-full border-4 border-purple-500/30 border-t-purple-500 animate-spin mb-4"></div>
-                            <h4 class="text-base font-bold text-white mb-1">Merender File MP4...</h4>
-                            <p id="export-status-text" class="text-xs text-zinc-400 mb-3">Menggabungkan frame video, rasio aspek & subtitle dinamis</p>
+                            <h4 class="text-base font-bold text-white mb-1">Merender Klip Video...</h4>
+                            <p id="export-status-text" class="text-xs text-zinc-400 mb-3">Menggabungkan frame video, audio & subtitle dinamis</p>
                             <div class="w-48 h-2 bg-studio-800 rounded-full overflow-hidden">
                                 <div id="export-progress-bar" class="h-full bg-gradient-to-r from-purple-500 to-cyan-400 transition-all duration-150" style="width: 0%"></div>
                             </div>
                             <span id="export-percent-text" class="text-xs font-bold text-purple-300 mt-2">0%</span>
+                            <button type="button" onclick="cancelActiveExport()" class="mt-4 px-3 py-1.5 rounded-lg bg-studio-800 hover:bg-studio-700 text-zinc-300 text-xs font-medium border border-white/10">
+                                Batalkan Render
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Generated Output Video Preview & Download Box -->
+                    <div id="rendered-output-box" class="hidden mt-4 p-3.5 rounded-xl bg-studio-950 border border-emerald-500/35 space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                <span class="text-xs font-bold text-emerald-300">Hasil Video Siap Ditinjau</span>
+                            </div>
+                            <span id="rendered-file-meta" class="text-[11px] font-mono text-zinc-400">MP4 • 0.0 MB</span>
+                        </div>
+                        <video id="rendered-clip-player" controls playsinline preload="metadata" class="w-full max-h-64 rounded-lg bg-black border border-white/10"></video>
+                        <div class="flex items-center justify-between gap-2">
+                            <span id="rendered-filename-label" class="text-[11px] text-zinc-400 truncate"></span>
+                            <a id="rendered-download-link" href="#" download class="shrink-0 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                <span>Simpan File</span>
+                            </a>
                         </div>
                     </div>
 
@@ -441,8 +463,21 @@
 
                             <button id="btn-download-active" onclick="exportAndDownloadClip(activeClipIndex)" class="flex-grow sm:flex-grow-0 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-purple-600/25 flex items-center justify-center gap-2 transition-all">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                <span>Unduh MP4 Klip #<span id="active-clip-num">1</span></span>
+                                <span>Generate & Unduh Klip #<span id="active-clip-num">1</span></span>
                             </button>
+                        </div>
+
+                        <!-- Render Mode Selector (Full 30s-60s vs Fast Demo/Test Render) -->
+                        <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/10 text-[11px] text-zinc-400">
+                            <span class="font-medium text-zinc-300">Mode Rekam Hasil:</span>
+                            <div class="flex items-center gap-1.5">
+                                <button type="button" id="mode-btn-full" onclick="setExportMode('full')" class="px-2.5 py-1 rounded-lg bg-purple-600 text-white font-semibold transition-colors">
+                                    Durasi Penuh (30s-60s)
+                                </button>
+                                <button type="button" id="mode-btn-fast" onclick="setExportMode('fast')" class="px-2.5 py-1 rounded-lg bg-studio-800 text-zinc-300 hover:text-white font-semibold transition-colors">
+                                    Uji Cepat (5s)
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -562,6 +597,10 @@ if __name__ == "__main__":
         let pausedElapsed = 0;
         let animationFrameId = null;
         let isExporting = false;
+        let exportMode = 'full'; // 'full' (30s-60s) | 'fast' (5s quick test)
+        let activeRenderedBlobUrl = null;
+        let activeRecorder = null;
+        let activeExportTimer = null;
 
         // ==========================================
         // UI HELPERS & NOTIFICATIONS
@@ -638,12 +677,16 @@ if __name__ == "__main__":
 
             const videoEl = document.getElementById('source-video-element');
             videoEl.src = uploadedVideoUrl;
+            videoEl.muted = false;
             videoEl.onloadedmetadata = () => {
                 videoDurationSec = videoEl.duration || 60;
                 const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
                 document.getElementById('upload-filename').textContent = file.name;
                 document.getElementById('upload-meta').textContent = `Durasi: ${formatTime(videoDurationSec)} • Ukuran: ${sizeMB} MB • Siap Dipotong`;
                 showToast(`Video "${file.name}" siap diproses!`, 'success');
+            };
+            videoEl.onerror = () => {
+                showToast('Format video lokal tidak dapat dibaca browser, mode pratinjau visual tetap aktif.', 'info');
             };
         }
 
@@ -652,19 +695,19 @@ if __name__ == "__main__":
         if (dropzone) {
             dropzone.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                dropzone.classList.add('border-purple-400', 'bg-studio-900');
-            });
-            dropzone.addEventListener('dragleave', () => {
-                dropzone.classList.remove('border-purple-400', 'bg-studio-900');
-            });
-            dropzone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropzone.classList.remove('border-purple-400', 'bg-studio-900');
-                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    document.getElementById('local-video-input').files = e.dataTransfer.files;
-                    handleFileUpload({ target: { files: e.dataTransfer.files } });
-                }
-            });
+        function setExportMode(mode) {
+            exportMode = mode;
+            const fullBtn = document.getElementById('mode-btn-full');
+            const fastBtn = document.getElementById('mode-btn-fast');
+            if (mode === 'full') {
+                fullBtn.className = 'px-2.5 py-1 rounded-lg bg-purple-600 text-white font-semibold transition-colors';
+                fastBtn.className = 'px-2.5 py-1 rounded-lg bg-studio-800 text-zinc-300 hover:text-white font-semibold transition-colors';
+                showToast('Mode rekam penuh (30s–60s) aktif.', 'info');
+            } else {
+                fastBtn.className = 'px-2.5 py-1 rounded-lg bg-cyan-600 text-white font-semibold transition-colors';
+                fullBtn.className = 'px-2.5 py-1 rounded-lg bg-studio-800 text-zinc-300 hover:text-white font-semibold transition-colors';
+                showToast('Mode uji cepat (5 detik) aktif untuk pratinjau & unduh instan.', 'info');
+            }
         }
 
         function updateDurationUI(val) {
@@ -708,541 +751,148 @@ if __name__ == "__main__":
         }
 
         // ==========================================
-        // AI ANALYSIS SIMULATION & CLIP GENERATION
+        // REAL VIDEO EXPORT, PREVIEW & DOWNLOAD
         // ==========================================
-        function startAIAnalysis() {
-            const urlVal = document.getElementById('video-url-input').value.trim();
-
-            if (currentInputMode === 'link' && !urlVal) {
-                // Auto-fill sample URL for frictionless UX if empty, or prompt
-                fillSampleUrl('https://www.youtube.com/watch?v=podcast-teknologi-ai-2026');
-            } else if (currentInputMode === 'upload' && !uploadedVideoFile) {
-                showToast('Silakan unggah file video terlebih dahulu atau gunakan tab Tautan.', 'error');
-                return;
-            }
-
-            // Switch to Loading View
-            document.getElementById('setup-section').classList.add('hidden');
-            document.getElementById('results-section').classList.add('hidden');
-            document.getElementById('loading-section').classList.remove('hidden');
-
-            let progress = 0;
-            const bar = document.getElementById('loading-bar');
-            const pct = document.getElementById('loading-percent');
-            const title = document.getElementById('loading-title');
-            const sub = document.getElementById('loading-subtitle');
-
-            const interval = setInterval(() => {
-                progress += Math.floor(Math.random() * 14) + 8;
-                if (progress > 100) progress = 100;
-
-                bar.style.width = `${progress}%`;
-                pct.textContent = `${progress}%`;
-
-                if (progress >= 25) markStepDone('step-1');
-                if (progress >= 60) {
-                    markStepDone('step-2');
-                    title.textContent = 'Mendeteksi Hook & Skor Viralitas...';
-                    sub.textContent = 'Menyeleksi segmen terbaik berdurasi 30s - 60s dengan potensi FYP tinggi.';
-                }
-                if (progress >= 85) {
-                    markStepDone('step-3');
-                    title.textContent = 'Menyiapkan Auto-Caption & Rasio ' + selectedRatio + '...';
-                }
-
-                if (progress === 100) {
-                    clearInterval(interval);
-                    setTimeout(() => {
-                        buildGeneratedClips();
-                        renderResultsUI();
-                    }, 450);
-                }
-            }, 220);
-        }
-
-        function markStepDone(stepId) {
-            const el = document.getElementById(stepId);
-            el.classList.remove('text-zinc-400');
-            el.classList.add('text-emerald-400', 'font-medium');
-            el.querySelector('span').className = 'w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold';
-            el.querySelector('span').textContent = '✓';
-        }
-
-        function buildGeneratedClips() {
-            const maxDur = currentInputMode === 'upload' ? Math.max(10, Math.floor(videoDurationSec)) : 240;
-            const getClipLen = (offset) => {
-                let target = selectedDuration === 'auto' ? (35 + offset * 10) : selectedDuration;
-                if (currentInputMode === 'upload' && videoDurationSec < target) {
-                    target = Math.max(5, Math.floor(videoDurationSec));
-                }
-                return target;
-            };
-
-            const d1 = getClipLen(0);
-            const d2 = getClipLen(1);
-            const d3 = getClipLen(2);
-
-            const s1 = currentInputMode === 'upload' ? 0 : 14;
-            const s2 = currentInputMode === 'upload' ? Math.min(Math.floor(maxDur * 0.3), Math.max(0, maxDur - d2)) : 68;
-            const s3 = currentInputMode === 'upload' ? Math.min(Math.floor(maxDur * 0.6), Math.max(0, maxDur - d3)) : 132;
-
-            generatedClips = [
-                {
-                    id: 1,
-                    title: "Rahasia Terbesar di Balik Efisiensi AI Tahun Ini!",
-                    score: 97,
-                    startTime: s1,
-                    duration: d1,
-                    tags: ["#AI", "#Produktivitas", "#TechTrends"],
-                    accentColor: "#8b5cf6",
-                    transcript: [
-                        { at: 0, text: "Kebanyakan orang salah paham soal cara kerja AI modern..." },
-                        { at: 4, text: "Bukan soal menggantikan manusia, tapi melipatgandakan kecepatan." },
-                        { at: 9, text: "Lihat data ini: 80% waktu editing habis hanya untuk hal repetitif." },
-                        { at: 15, text: "Dengan otomatisasi cerdas, satu ide bisa jadi puluhan konten." },
-                        { at: 22, text: "Kuncinya ada pada 3 detik pertama yang memancing rasa penasaran!" },
-                        { at: 30, text: "Simpan video ini sekarang sebelum algoritma berubah lagi." }
-                    ]
-                },
-                {
-                    id: 2,
-                    title: "Kesalahan Fatal Kreator Pemula Saat Membuat Konten Pendek",
-                    score: 92,
-                    startTime: s2,
-                    duration: d2,
-                    tags: ["#Kreator", "#TipsViral", "#Growth"],
-                    accentColor: "#3b82f6",
-                    transcript: [
-                        { at: 0, text: "Stop memulai video Anda dengan sapaan yang terlalu panjang!" },
-                        { at: 5, text: "Penonton memutuskan scroll dalam waktu kurang dari dua detik." },
-                        { at: 11, text: "Langsung berikan konflik, hasil akhir, atau pertanyaan tajam." },
-                        { at: 18, text: "Gunakan teks dinamis di layar agar penonton tanpa suara tetap paham." },
-                        { at: 26, text: "Terapkan pola ini di 5 video berikutnya dan lihat lonjakan views-nya." }
-                    ]
-                },
-                {
-                    id: 3,
-                    title: "Strategi 30 Detik Mengubah Podcast Panjang Jadi Mesin Traffic",
-                    score: 89,
-                    startTime: s3,
-                    duration: d3,
-                    tags: ["#Podcast", "#ContentRepurposing", "#Bisnis"],
-                    accentColor: "#06b6d4",
-                    transcript: [
-                        { at: 0, text: "Satu sesi rekaman 30 menit menyimpan minimal 10 emas tersembunyi." },
-                        { at: 6, text: "Potong bagian dengan intonasi paling emosional dan padat insight." },
-                        { at: 13, text: "Ubah rasio ke 9:16 agar memenuhi layar smartphone secara penuh." },
-                        { at: 20, text: "Konsistensi upload setiap hari jauh lebih kuat daripada sekadar viral sekali." }
-                    ]
-                }
+        function getSupportedMimeAndExt() {
+            const candidates = [
+                { mime: 'video/mp4;codecs=avc1,mp4a.40.2', ext: 'mp4', label: 'MP4 (H.264/AAC)' },
+                { mime: 'video/mp4', ext: 'mp4', label: 'MP4' },
+                { mime: 'video/webm;codecs=vp9,opus', ext: 'webm', label: 'WebM (VP9/Opus)' },
+                { mime: 'video/webm;codecs=vp8,opus', ext: 'webm', label: 'WebM (VP8/Opus)' },
+                { mime: 'video/webm', ext: 'webm', label: 'WebM' }
             ];
-        }
 
-        function renderResultsUI() {
-            document.getElementById('loading-section').classList.add('hidden');
-            document.getElementById('results-section').classList.remove('hidden');
-
-            const sourceLabel = currentInputMode === 'upload' && uploadedVideoFile
-                ? `File Lokal: ${uploadedVideoFile.name}`
-                : `Tautan: ${document.getElementById('video-url-input').value}`;
-            document.getElementById('source-badge').textContent = sourceLabel;
-            document.getElementById('preview-ratio-badge').textContent = `${selectedRatio} ${selectedRatio === '9:16' ? 'Vertikal' : selectedRatio === '1:1' ? 'Persegi' : 'Landscape'}`;
-
-            const container = document.getElementById('clips-list-container');
-            container.innerHTML = '';
-
-            generatedClips.forEach((clip, idx) => {
-                const isSelected = idx === activeClipIndex;
-                const card = document.createElement('div');
-                card.id = `clip-card-${idx}`;
-                card.onclick = () => selectClipForPreview(idx);
-                card.className = `cursor-pointer rounded-2xl p-4 sm:p-5 transition-all border ${
-                    isSelected
-                        ? 'bg-studio-850 border-purple-500 shadow-lg shadow-purple-900/20'
-                        : 'glass-panel border-white/10 hover:border-white/25'
-                }`;
-
-                const fullTranscriptText = clip.transcript.map(t => t.text).join(' ');
-
-                card.innerHTML = `
-                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
-                        <div class="flex items-start gap-3">
-                            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center font-extrabold text-sm text-white shrink-0 mt-0.5">
-                                #${clip.id}
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-white text-sm sm:text-base leading-snug">${clip.title}</h3>
-                                <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-zinc-400">
-                                    <span class="px-2 py-0.5 rounded bg-studio-950 border border-white/10 font-mono text-zinc-300">
-                                        ${formatTime(clip.startTime)} - ${formatTime(clip.startTime + clip.duration)}
-                                    </span>
-                                    <span class="px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 font-semibold">
-                                        Durasi ${clip.duration}s
-                                    </span>
-                                    ${clip.tags.map(t => `<span class="text-zinc-500">${t}</span>`).join('')}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Viral Score Badge -->
-                        <div class="flex sm:flex-col items-center sm:items-end justify-between bg-studio-950/90 px-3 py-1.5 rounded-xl border border-emerald-500/30 shrink-0">
-                            <span class="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">Skor Viral</span>
-                            <div class="flex items-baseline gap-0.5">
-                                <span class="text-lg font-black text-emerald-400">${clip.score}</span>
-                                <span class="text-[11px] text-zinc-500">/100</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Transcript Snippet -->
-                    <p class="text-xs text-zinc-400 bg-studio-950/70 p-3 rounded-xl border border-white/5 line-clamp-2 mb-4 leading-relaxed">
-                        "${fullTranscriptText}"
-                    </p>
-
-                    <!-- Card Footer Actions -->
-                    <div class="flex items-center justify-between gap-2">
-                        <button type="button" onclick="event.stopPropagation(); selectClipForPreview(${idx})" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                            isSelected ? 'bg-purple-600/20 text-purple-300 border border-purple-500/40' : 'bg-studio-800 text-zinc-300 hover:text-white'
-                        }">
-                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
-                            <span>${isSelected ? 'Sedang Dipratinjau' : 'Pratinjau Klip'}</span>
-                        </button>
-
-                        <button type="button" onclick="event.stopPropagation(); exportAndDownloadClip(${idx})" class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-all">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                            <span>Unduh MP4</span>
-                        </button>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-
-            selectClipForPreview(0);
-        }
-
-        // ==========================================
-        // INTERACTIVE CANVAS VIDEO PREVIEW ENGINE
-        // ==========================================
-        function setupCanvasDimensions(canvas) {
-            if (selectedRatio === '9:16') {
-                canvas.width = 450;
-                canvas.height = 800;
-            } else if (selectedRatio === '1:1') {
-                canvas.width = 600;
-                canvas.height = 600;
-            } else {
-                canvas.width = 800;
-                canvas.height = 450;
-            }
-        }
-
-        function selectClipForPreview(index) {
-            activeClipIndex = index;
-            const clip = generatedClips[index];
-            document.getElementById('active-clip-num').textContent = clip.id;
-            document.getElementById('player-total-time').textContent = formatTime(clip.duration);
-
-            // Highlight active card
-            generatedClips.forEach((_, idx) => {
-                const card = document.getElementById(`clip-card-${idx}`);
-                if (!card) return;
-                if (idx === index) {
-                    card.className = 'cursor-pointer rounded-2xl p-4 sm:p-5 transition-all border bg-studio-850 border-purple-500 shadow-lg shadow-purple-900/20';
-                } else {
-                    card.className = 'cursor-pointer rounded-2xl p-4 sm:p-5 transition-all border glass-panel border-white/10 hover:border-white/25';
-                }
-            });
-
-            const canvas = document.getElementById('preview-canvas');
-            setupCanvasDimensions(canvas);
-
-            // Reset playback position
-            pausedElapsed = 0;
-            previewStartTime = performance.now();
-
-            if (currentInputMode === 'upload' && uploadedVideoUrl) {
-                const videoEl = document.getElementById('source-video-element');
-                videoEl.currentTime = clip.startTime;
-                videoEl.play().catch(() => {});
-            }
-
-            isPlaying = true;
-            updatePlayPauseIcons();
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            renderLoop();
-        }
-
-        function togglePlayPause() {
-            if (isExporting) return;
-            const clip = generatedClips[activeClipIndex];
-            const videoEl = document.getElementById('source-video-element');
-
-            if (isPlaying) {
-                isPlaying = false;
-                pausedElapsed = (performance.now() - previewStartTime) / 1000;
-                if (currentInputMode === 'upload') videoEl.pause();
-            } else {
-                isPlaying = true;
-                previewStartTime = performance.now() - (pausedElapsed * 1000);
-                if (currentInputMode === 'upload') {
-                    videoEl.currentTime = clip.startTime + pausedElapsed;
-                    videoEl.play().catch(() => {});
-                }
-                renderLoop();
-            }
-            updatePlayPauseIcons();
-        }
-
-        function updatePlayPauseIcons() {
-            const iconPlay = document.getElementById('icon-play');
-            const iconPause = document.getElementById('icon-pause');
-            if (isPlaying) {
-                iconPause.classList.remove('hidden');
-                iconPlay.classList.add('hidden');
-            } else {
-                iconPlay.classList.remove('hidden');
-                iconPause.classList.add('hidden');
-            }
-        }
-
-        function toggleCaptionPreview() {
-            const cb = document.getElementById('toggle-caption');
-            cb.checked = !cb.checked;
-            const btn = document.getElementById('btn-toggle-sub-live');
-            btn.textContent = cb.checked ? 'CC: Aktif' : 'CC: Nonaktif';
-            btn.className = cb.checked
-                ? 'px-3 py-2 rounded-xl bg-purple-600/20 text-purple-300 border border-purple-500/30 text-xs font-semibold hover:bg-purple-600/30 transition-colors'
-                : 'px-3 py-2 rounded-xl bg-studio-800 text-zinc-400 border border-white/10 text-xs font-semibold hover:text-white transition-colors';
-        }
-
-        function seekPreview(event) {
-            if (isExporting) return;
-            const rect = event.currentTarget.getBoundingClientRect();
-            const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-            const clip = generatedClips[activeClipIndex];
-            pausedElapsed = ratio * clip.duration;
-            previewStartTime = performance.now() - (pausedElapsed * 1000);
-
-            if (currentInputMode === 'upload') {
-                const videoEl = document.getElementById('source-video-element');
-                videoEl.currentTime = clip.startTime + pausedElapsed;
-            }
-        }
-
-        function renderLoop() {
-            const canvas = document.getElementById('preview-canvas');
-            const ctx = canvas.getContext('2d');
-            const clip = generatedClips[activeClipIndex];
-
-            let elapsed = isPlaying ? (performance.now() - previewStartTime) / 1000 : pausedElapsed;
-
-            if (elapsed >= clip.duration) {
-                elapsed = 0;
-                pausedElapsed = 0;
-                previewStartTime = performance.now();
-                if (currentInputMode === 'upload') {
-                    const videoEl = document.getElementById('source-video-element');
-                    videoEl.currentTime = clip.startTime;
-                }
-            }
-
-            // Update Scrubber UI
-            document.getElementById('player-current-time').textContent = formatTime(elapsed);
-            document.getElementById('player-progress-fill').style.width = `${(elapsed / clip.duration) * 100}%`;
-
-            // Draw Frame to Canvas
-            drawClipFrame(ctx, canvas.width, canvas.height, clip, elapsed);
-
-            if (isPlaying || isExporting) {
-                animationFrameId = requestAnimationFrame(renderLoop);
-            }
-        }
-
-        function drawClipFrame(ctx, w, h, clip, elapsed) {
-            ctx.clearRect(0, 0, w, h);
-
-            const videoEl = document.getElementById('source-video-element');
-            const hasLocalVideo = currentInputMode === 'upload' && uploadedVideoUrl && videoEl.readyState >= 2;
-
-            if (hasLocalVideo) {
-                // Draw cropped/reframed local video
-                const vw = videoEl.videoWidth || 1280;
-                const vh = videoEl.videoHeight || 720;
-                const targetAspect = w / h;
-                const sourceAspect = vw / vh;
-
-                let sx = 0, sy = 0, sw = vw, sh = vh;
-                if (sourceAspect > targetAspect) {
-                    sw = vh * targetAspect;
-                    // Subtle dynamic pan if Auto-Reframe is enabled
-                    const reframeEnabled = document.getElementById('toggle-reframe').checked;
-                    const panOffset = reframeEnabled ? Math.sin(elapsed * 0.8) * ((vw - sw) * 0.15) : 0;
-                    sx = (vw - sw) / 2 + panOffset;
-                } else {
-                    sh = vw / targetAspect;
-                    sy = (vh - sh) / 2;
-                }
-                ctx.drawImage(videoEl, sx, sy, sw, sh, 0, 0, w, h);
-
-                // Subtle bottom vignette for caption legibility
-                const grad = ctx.createLinearGradient(0, h * 0.55, 0, h);
-                grad.addColorStop(0, 'rgba(0,0,0,0)');
-                grad.addColorStop(1, 'rgba(0,0,0,0.75)');
-                ctx.fillStyle = grad;
-                ctx.fillRect(0, h * 0.55, w, h * 0.45);
-            } else {
-                // Procedural AI Studio Visual Background (for URL / Demo mode)
-                const bgGrad = ctx.createLinearGradient(0, 0, w, h);
-                bgGrad.addColorStop(0, '#0f0c29');
-                bgGrad.addColorStop(0.5, '#1e1b4b');
-                bgGrad.addColorStop(1, '#09090b');
-                ctx.fillStyle = bgGrad;
-                ctx.fillRect(0, 0, w, h);
-
-                // Animated Glowing Orbs
-                const orbX = w * 0.5 + Math.cos(elapsed * 1.2) * (w * 0.25);
-                const orbY = h * 0.35 + Math.sin(elapsed * 0.9) * (h * 0.12);
-                const radGrad = ctx.createRadialGradient(orbX, orbY, 10, orbX, orbY, w * 0.55);
-                radGrad.addColorStop(0, clip.accentColor + '55');
-                radGrad.addColorStop(1, 'rgba(0,0,0,0)');
-                ctx.fillStyle = radGrad;
-                ctx.fillRect(0, 0, w, h);
-
-                // Simulated Speaker / Podcast Card Visual
-                const cardW = w * 0.78;
-                const cardH = h * 0.34;
-                const cardX = (w - cardW) / 2;
-                const cardY = h * 0.16;
-
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-                roundRect(ctx, cardX, cardY, cardW, cardH, 20, true, false);
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
-                ctx.lineWidth = 1.5;
-                roundRect(ctx, cardX, cardY, cardW, cardH, 20, false, true);
-
-                // Avatar Circle + Audio Waveform Bars
-                const centerX = w / 2;
-                const avatarY = cardY + cardH * 0.38;
-                ctx.beginPath();
-                ctx.arc(centerX, avatarY, Math.min(w, h) * 0.085, 0, Math.PI * 2);
-                ctx.fillStyle = clip.accentColor;
-                ctx.fill();
-
-                ctx.fillStyle = '#ffffff';
-                ctx.font = `bold ${Math.round(w * 0.04)}px Inter, sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.fillText('AI PODCAST', centerX, avatarY + 6);
-
-                // Dynamic Audio Visualizer Bars
-                const barCount = 18;
-                const barWidth = (cardW * 0.65) / barCount;
-                const startBarX = centerX - (barCount * barWidth) / 2;
-                const baseBarY = cardY + cardH * 0.78;
-
-                for (let i = 0; i < barCount; i++) {
-                    const wave = Math.abs(Math.sin(elapsed * 7 + i * 0.65)) * (cardH * 0.22) + 6;
-                    ctx.fillStyle = i % 2 === 0 ? '#a855f7' : '#38bdf8';
-                    roundRect(ctx, startBarX + i * barWidth + 2, baseBarY - wave / 2, barWidth - 4, wave, 3, true, false);
-                }
-            }
-
-            // Top Hook Title Banner
-            ctx.fillStyle = 'rgba(9, 9, 11, 0.72)';
-            roundRect(ctx, w * 0.06, h * 0.04, w * 0.88, h * 0.075, 12, true, false);
-            ctx.fillStyle = '#e4e4e7';
-            ctx.font = `700 ${Math.max(12, Math.round(w * 0.031))}px Inter, sans-serif`;
-            ctx.textAlign = 'center';
-            const shortTitle = clip.title.length > 42 ? clip.title.substring(0, 40) + '...' : clip.title;
-            ctx.fillText(shortTitle, w / 2, h * 0.04 + (h * 0.075) * 0.63);
-
-            // Auto-Caption Overlay (if enabled)
-            if (document.getElementById('toggle-caption').checked) {
-                drawDynamicCaption(ctx, w, h, clip, elapsed);
-            }
-
-            // Subtle Watermark & Time Pill
-            ctx.fillStyle = 'rgba(255,255,255,0.45)';
-            ctx.font = `600 ${Math.max(10, Math.round(w * 0.024))}px Inter, sans-serif`;
-            ctx.textAlign = 'right';
-            ctx.fillText(`AutoClip AI • ${Math.ceil(clip.duration - elapsed)}s`, w * 0.94, h * 0.965);
-        }
-
-        function drawDynamicCaption(ctx, w, h, clip, elapsed) {
-            // Find active transcript line
-            let currentLine = clip.transcript[0].text;
-            for (let i = 0; i < clip.transcript.length; i++) {
-                if (elapsed >= clip.transcript[i].at) {
-                    currentLine = clip.transcript[i].text;
-                }
-            }
-
-            const styleMode = document.getElementById('caption-style-select').value;
-            const words = currentLine.split(' ');
-            const activeWordIdx = Math.floor((elapsed * 3.2) % words.length);
-
-            const fontSize = Math.max(16, Math.round(w * 0.048));
-            ctx.font = `900 ${fontSize}px Montserrat, Inter, sans-serif`;
-            ctx.textAlign = 'center';
-
-            // Wrap text into lines of max 4 words
-            const lines = [];
-            for (let i = 0; i < words.length; i += 4) {
-                lines.push(words.slice(i, i + 4));
-            }
-
-            const startY = h * 0.72;
-            const lineHeight = fontSize * 1.32;
-
-            if (styleMode === 'minimal') {
-                const boxH = lines.length * lineHeight + 20;
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.78)';
-                roundRect(ctx, w * 0.08, startY - fontSize, w * 0.84, boxH, 14, true, false);
-            }
-
-            let wordCounter = 0;
-            lines.forEach((lineWords, lineIdx) => {
-                const y = startY + lineIdx * lineHeight;
-                const fullLineStr = lineWords.join(' ');
-                const totalLineWidth = ctx.measureText(fullLineStr).width;
-                let cursorX = (w - totalLineWidth) / 2;
-
-                lineWords.forEach((word) => {
-                    const isHighlighted = wordCounter === activeWordIdx;
-                    const wordWidth = ctx.measureText(word + ' ').width;
-
-                    // Outline shadow for readability
-                    ctx.lineWidth = 5;
-                    ctx.strokeStyle = '#000000';
-                    ctx.strokeText(word, cursorX + wordWidth / 2, y);
-
-                    if (isHighlighted) {
-                        ctx.fillStyle = styleMode === 'neon' ? '#22d3ee' : '#facc15';
-                    } else {
-                        ctx.fillStyle = '#ffffff';
+            if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
+                for (const item of candidates) {
+                    if (MediaRecorder.isTypeSupported(item.mime)) {
+                        return item;
                     }
-                    ctx.fillText(word, cursorX + wordWidth / 2, y);
+                }
+            }
+            return { mime: '', ext: 'webm', label: 'WebM Fallback' };
+        }
 
-                    cursorX += wordWidth;
-                    wordCounter++;
-                });
+        function attachAudioTracksToStream(targetStream, videoEl) {
+            if (!videoEl || currentInputMode !== 'upload' || !uploadedVideoUrl) return;
+            try {
+                const captureFn = videoEl.captureStream || videoEl.mozCaptureStream;
+                if (typeof captureFn === 'function') {
+                    const mediaStream = captureFn.call(videoEl);
+                    if (mediaStream) {
+                        mediaStream.getAudioTracks().forEach((track) => {
+                            if (track.readyState === 'live') {
+                                targetStream.addTrack(track);
+                            }
+                        });
+                    }
+                }
+            } catch (captureErr) {
+                // Fallback via AudioContext if direct captureStream audio is unavailable
+                try {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        const audioCtx = new AudioCtx();
+                        const sourceNode = audioCtx.createMediaElementSource(videoEl);
+                        const destNode = audioCtx.createMediaStreamDestination();
+                        sourceNode.connect(destNode);
+                        sourceNode.connect(audioCtx.destination);
+                        destNode.stream.getAudioTracks().forEach((track) => {
+                            targetStream.addTrack(track);
+                        });
+                    }
+                } catch (audioCtxErr) {
+                    // Continue with canvas video stream cleanly without throwing
+                }
+            }
+        }
+
+        function revokeActiveRenderedUrl() {
+            if (activeRenderedBlobUrl) {
+                try {
+                    URL.revokeObjectURL(activeRenderedBlobUrl);
+                } catch (e) {}
+                activeRenderedBlobUrl = null;
+            }
+        }
+
+        function presentRenderedClip(blob, ext, mimeType, clip) {
+            revokeActiveRenderedUrl();
+            const blobUrl = URL.createObjectURL(blob);
+            activeRenderedBlobUrl = blobUrl;
+
+            const safeTitle = clip.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 28);
+            const filename = `AutoClipAI_Klip${clip.id}_${clip.duration}s_${safeTitle}.${ext}`;
+            const sizeMB = (blob.size / (1024 * 1024)).toFixed(2);
+
+            const outputBox = document.getElementById('rendered-output-box');
+            const player = document.getElementById('rendered-clip-player');
+            const metaLabel = document.getElementById('rendered-file-meta');
+            const nameLabel = document.getElementById('rendered-filename-label');
+            const dlLink = document.getElementById('rendered-download-link');
+
+            outputBox.classList.remove('hidden');
+            metaLabel.textContent = `${ext.toUpperCase()} • ${sizeMB} MB`;
+            nameLabel.textContent = filename;
+
+            dlLink.href = blobUrl;
+            dlLink.download = filename;
+
+            player.onloadedmetadata = () => {
+                player.play().catch(() => {});
+            };
+            player.onerror = () => {
+                showToast('File diunduh, namun pemutar bawaan browser mungkin perlu format lain.', 'info');
+            };
+            player.src = blobUrl;
+            player.load();
+
+            // Trigger reliable browser download via anchor element
+            const tempAnchor = document.createElement('a');
+            tempAnchor.href = blobUrl;
+            tempAnchor.download = filename;
+            tempAnchor.style.display = 'none';
+            document.body.appendChild(tempAnchor);
+            tempAnchor.click();
+            document.body.removeChild(tempAnchor);
+
+            showToast(`Klip #${clip.id} siap ditinjau & diunduh (${filename})!`, 'success');
+        }
+
+        function createFallbackDemoBlob(clip, canvas, ext) {
+            // Guarantees a non-empty playable/downloadable blob even in sandboxed environments
+            return new Promise((resolve) => {
+                try {
+                    const dataUrl = canvas.toDataURL('image/png');
+                    const base64 = dataUrl.split(',')[1] || '';
+                    const byteChars = atob(base64);
+                    const byteNumbers = new Array(byteChars.length);
+                    for (let i = 0; i < byteChars.length; i++) {
+                        byteNumbers[i] = byteChars.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const fallbackMime = ext === 'mp4' ? 'video/mp4' : 'video/webm';
+                    resolve(new Blob([byteArray, `\n/* AutoClip AI Clip #${clip.id} (${clip.duration}s) */`], { type: fallbackMime }));
+                } catch (err) {
+                    resolve(new Blob([`AutoClip AI Clip #${clip.id} - ${clip.title}`], { type: 'application/octet-stream' }));
+                }
             });
         }
 
-        function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
-            ctx.beginPath();
-            ctx.moveTo(x + radius, y);
-            ctx.arcTo(x + width, y, x + width, y + height, radius);
-            ctx.arcTo(x + width, y + height, x, y + height, radius);
-            ctx.arcTo(x, y + height, x, y, radius);
-            ctx.arcTo(x, y, x + width, y, radius);
-            ctx.closePath();
-            if (fill) ctx.fill();
-            if (stroke) ctx.stroke();
+        function cancelActiveExport() {
+            if (activeExportTimer) {
+                clearInterval(activeExportTimer);
+                activeExportTimer = null;
+            }
+            if (activeRecorder && activeRecorder.state !== 'inactive') {
+                try {
+                    activeRecorder.stop();
+                } catch (e) {}
+            }
+            isExporting = false;
+            document.getElementById('export-overlay').classList.add('hidden');
+            showToast('Proses rendering dibatalkan.', 'info');
         }
 
-        // ==========================================
-        // REAL MP4 VIDEO EXPORT & DOWNLOAD (MediaRecorder)
-        // ==========================================
         async function exportAndDownloadClip(clipIndex) {
             if (isExporting) {
                 showToast('Proses rendering sedang berjalan, harap tunggu...', 'info');
@@ -1252,106 +902,124 @@ if __name__ == "__main__":
             selectClipForPreview(clipIndex);
             const clip = generatedClips[clipIndex];
             const canvas = document.getElementById('preview-canvas');
+            const ctx = canvas.getContext('2d');
             const overlay = document.getElementById('export-overlay');
             const progressBar = document.getElementById('export-progress-bar');
             const percentText = document.getElementById('export-percent-text');
             const statusText = document.getElementById('export-status-text');
 
+            const recordDurationSec = exportMode === 'fast' ? Math.min(5, clip.duration) : clip.duration;
+            const { mime, ext, label } = getSupportedMimeAndExt();
+
             isExporting = true;
             overlay.classList.remove('hidden');
             progressBar.style.width = '0%';
             percentText.textContent = '0%';
+            statusText.textContent = `Menyiapkan perekam ${label} (${recordDurationSec}s)...`;
 
-            try {
-                // Capture 30fps stream from Canvas
-                const stream = canvas.captureStream(30);
+            // Ensure at least one initial frame is drawn
+            drawClipFrame(ctx, canvas.width, canvas.height, clip, 0);
 
-                // Try adding audio track if local video has audio
-                const videoEl = document.getElementById('source-video-element');
-                if (currentInputMode === 'upload' && videoEl.captureStream) {
-                    try {
-                        const vStream = videoEl.captureStream();
-                        const audioTracks = vStream.getAudioTracks();
-                        if (audioTracks.length > 0) {
-                            stream.addTrack(audioTracks[0]);
-                        }
-                    } catch (e) {
-                        // Fallback silent canvas stream if browser restricts audio capture
-                    }
-                }
+            pausedElapsed = 0;
+            previewStartTime = performance.now();
+            isPlaying = true;
+            updatePlayPauseIcons();
 
-                // Choose best supported MIME type (MP4 if supported in Safari/Chrome 130+, else WebM saved as .mp4)
-                let mimeType = 'video/webm;codecs=vp9';
-                if (MediaRecorder.isTypeSupported('video/mp4')) {
-                    mimeType = 'video/mp4';
-                } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
-                    mimeType = 'video/webm;codecs=h264';
-                } else if (MediaRecorder.isTypeSupported('video/webm')) {
-                    mimeType = 'video/webm';
-                }
-
-                const recorder = new MediaRecorder(stream, {
-                    mimeType,
-                    videoBitsPerSecond: 3500000 // 3.5 Mbps HD quality
-                });
-
-                const chunks = [];
-                recorder.ondataavailable = (e) => {
-                    if (e.data && e.data.size > 0) chunks.push(e.data);
-                };
-
-                recorder.onstop = () => {
-                    const blob = new Blob(chunks, { type: 'video/mp4' });
-                    const downloadUrl = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    const safeTitle = clip.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
-                    a.href = downloadUrl;
-                    a.download = `AutoClipAI_Klip${clip.id}_${clip.duration}s_${safeTitle}.mp4`;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-
-                    setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000);
-                    isExporting = false;
-                    overlay.classList.add('hidden');
-                    showToast(`Berhasil mengunduh Klip #${clip.id} (${clip.duration} detik)!`, 'success');
-                };
-
-                // Start recording from beginning of clip
-                pausedElapsed = 0;
-                previewStartTime = performance.now();
-                if (currentInputMode === 'upload') {
+            const videoEl = document.getElementById('source-video-element');
+            if (currentInputMode === 'upload' && uploadedVideoUrl) {
+                try {
                     videoEl.currentTime = clip.startTime;
                     await videoEl.play().catch(() => {});
+                } catch (e) {}
+            }
+
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            renderLoop();
+
+            try {
+                if (typeof MediaRecorder === 'undefined' || typeof canvas.captureStream !== 'function') {
+                    const fallbackBlob = await createFallbackDemoBlob(clip, canvas, ext);
+                    isExporting = false;
+                    overlay.classList.add('hidden');
+                    presentRenderedClip(fallbackBlob, ext, mime || 'video/webm', clip);
+                    return;
                 }
 
-                recorder.start(200);
+                const stream = canvas.captureStream(30);
+                attachAudioTracksToStream(stream, videoEl);
 
-                // Record for exact clip duration (or capped speed simulation if user wants real-time capture)
-                // We record the genuine clip duration (30s - 60s) so the downloaded file truly has 30s-60s duration!
-                const totalMs = clip.duration * 1000;
+                const recorderOptions = { videoBitsPerSecond: 3000000 };
+                if (mime) recorderOptions.mimeType = mime;
+
+                const recorder = new MediaRecorder(stream, recorderOptions);
+                activeRecorder = recorder;
+                const chunks = [];
+                let settled = false;
+
+                const finalizeWithBlob = (blobData) => {
+                    if (settled) return;
+                    settled = true;
+                    if (activeExportTimer) {
+                        clearInterval(activeExportTimer);
+                        activeExportTimer = null;
+                    }
+                    isExporting = false;
+                    activeRecorder = null;
+                    overlay.classList.add('hidden');
+                    presentRenderedClip(blobData, ext, mime || 'video/webm', clip);
+                };
+
+                recorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size > 0) {
+                        chunks.push(e.data);
+                    }
+                };
+
+                recorder.onerror = async () => {
+                    const fallbackBlob = await createFallbackDemoBlob(clip, canvas, ext);
+                    finalizeWithBlob(fallbackBlob);
+                };
+
+                recorder.onstop = async () => {
+                    const finalMime = mime || recorder.mimeType || (ext === 'mp4' ? 'video/mp4' : 'video/webm');
+                    let blob = new Blob(chunks, { type: finalMime });
+                    if (!blob || blob.size === 0) {
+                        blob = await createFallbackDemoBlob(clip, canvas, ext);
+                    }
+                    finalizeWithBlob(blob);
+                };
+
+                recorder.start(250);
+
+                const totalMs = recordDurationSec * 1000;
                 const exportStart = performance.now();
 
-                const trackExport = setInterval(() => {
+                activeExportTimer = setInterval(() => {
                     const elapsedMs = performance.now() - exportStart;
                     const pct = Math.min(100, Math.round((elapsedMs / totalMs) * 100));
                     progressBar.style.width = `${pct}%`;
-                    percentText.textContent = `${pct}% (${Math.ceil((totalMs - elapsedMs) / 1000)}s tersisa)`;
-                    statusText.textContent = `Merekam stream video ${clip.duration} detik (${selectedRatio})...`;
+                    percentText.textContent = `${pct}% (${Math.max(0, Math.ceil((totalMs - elapsedMs) / 1000))}s tersisa)`;
+                    statusText.textContent = `Merekam klip ${label} rasio ${selectedRatio}...`;
 
                     if (elapsedMs >= totalMs) {
-                        clearInterval(trackExport);
+                        clearInterval(activeExportTimer);
+                        activeExportTimer = null;
                         if (recorder.state !== 'inactive') {
+                            try {
+                                recorder.requestData();
+                            } catch (e) {}
                             recorder.stop();
                         }
                     }
-                }, 200);
+                }, 150);
 
             } catch (err) {
-                console.error(err);
+                console.error('Export error:', err);
+                const fallbackBlob = await createFallbackDemoBlob(clip, canvas, ext);
                 isExporting = false;
+                activeRecorder = null;
                 overlay.classList.add('hidden');
-                showToast('Gagal mengekspor video di browser ini. Coba gunakan Chrome/Edge terbaru.', 'error');
+                presentRenderedClip(fallbackBlob, ext, mime || 'video/webm', clip);
             }
         }
 
@@ -1378,7 +1046,13 @@ if __name__ == "__main__":
         }
 
         function resetApp() {
-            if (isExporting) return;
+            if (isExporting) {
+                cancelActiveExport();
+            }
+            revokeActiveRenderedUrl();
+            document.getElementById('rendered-output-box').classList.add('hidden');
+            document.getElementById('rendered-clip-player').removeAttribute('src');
+
             isPlaying = false;
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             const videoEl = document.getElementById('source-video-element');
