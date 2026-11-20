@@ -1,0 +1,1402 @@
+```html
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoClip AI — Pembuat Klip Video Viral Otomatis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Montserrat', 'sans-serif'],
+                    },
+                    colors: {
+                        studio: {
+                            950: '#09090b',
+                            900: '#111116',
+                            850: '#16161d',
+                            800: '#1e1e28',
+                            700: '#2a2a38',
+                        },
+                        electric: {
+                            purple: '#8b5cf6',
+                            blue: '#3b82f6',
+                            cyan: '#06b6d4',
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'gradient-x': 'gradient-x 6s ease infinite',
+                    },
+                    keyframes: {
+                        'gradient-x': {
+                            '0%, 100%': { 'background-position': '0% 50%' },
+                            '50%': { 'background-position': '100% 50%' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #09090b;
+            color: #f4f4f5;
+            overflow-x: hidden;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111116;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a2a38;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8b5cf6;
+        }
+        /* Range Slider Styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 6px;
+            border-radius: 999px;
+            background: #2a2a38;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+            border: 2px solid #ffffff;
+        }
+        .glass-panel {
+            background: rgba(22, 22, 29, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .gradient-border {
+            position: relative;
+            background: #16161d;
+            border-radius: 1rem;
+        }
+        .gradient-border::before {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            border-radius: 1rem;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(59, 130, 246, 0.5), rgba(6, 182, 212, 0.2));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-purple-600 selection:text-white">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3 cursor-pointer" onclick="resetApp()">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-display font-black text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-200 to-blue-300">AutoClip AI</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">Studio v2.6</span>
+                    </div>
+                    <p class="text-[11px] text-zinc-400 hidden sm:block">1 Video Panjang → 3 Klip Viral (30s–60s)</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="openBackendModal()" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-studio-800 hover:bg-studio-700 text-zinc-200 text-xs sm:text-sm font-medium border border-white/10 transition-all">
+                    <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                    </svg>
+                    <span>Kode Backend Server</span>
+                </button>
+                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>WebGPU / Canvas Engine Siap</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+        <!-- SECTION 1: INPUT & CONFIGURATION STUDIO -->
+        <section id="setup-section" class="transition-all duration-500">
+            <!-- Hero Title -->
+            <div class="text-center max-w-3xl mx-auto mb-8">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/25 text-purple-300 text-xs font-medium mb-4">
+                    <svg class="w-3.5 h-3.5 text-purple-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                    <span>AI Viral Hook Detector & Auto-Caption Dinamis</span>
+                </div>
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-3 leading-tight">
+                    Ubah Video Panjang Jadi <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400">Klip Viral 30s–60s</span> Secara Otomatis
+                </h1>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-2xl mx-auto">
+                    Tempel tautan YouTube/TikTok/Instagram atau unggah video lokal Anda. AI akan mendeteksi momen terbaik, memotong rasio vertikal, menambahkan subtitle dinamis, dan mengekspor file MP4.
+                </p>
+            </div>
+
+            <!-- Main Studio Input Card -->
+            <div class="max-w-4xl mx-auto gradient-border p-5 sm:p-8 shadow-2xl shadow-purple-950/20">
+                
+                <!-- Source Tabs -->
+                <div class="flex p-1 bg-studio-950 rounded-xl border border-white/10 mb-6 max-w-md mx-auto">
+                    <button id="tab-link" onclick="switchInputTab('link')" class="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                        <span>Tautan Video (URL)</span>
+                    </button>
+                    <button id="tab-upload" onclick="switchInputTab('upload')" class="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all text-zinc-400 hover:text-white">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                        <span>Unggah Video Lokal</span>
+                    </button>
+                </div>
+
+                <!-- Tab 1: URL Input -->
+                <div id="panel-link" class="space-y-4 mb-8">
+                    <div class="relative flex flex-col sm:flex-row gap-2">
+                        <div class="relative flex-grow">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            </div>
+                            <input type="url" id="video-url-input" placeholder="Tempel tautan YouTube, TikTok, Instagram Reels, atau Podcast..." class="w-full pl-11 pr-24 py-3.5 bg-studio-950 border border-white/15 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all">
+                            <button onclick="pasteFromClipboard()" class="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-studio-800 hover:bg-studio-700 text-xs font-medium text-purple-300 border border-white/10 transition-colors">
+                                Tempel
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Sample Links -->
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+                        <span class="font-medium text-zinc-300">Coba contoh tautan cepat:</span>
+                        <button onclick="fillSampleUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ-podcast-ai')" class="px-2.5 py-1 rounded-lg bg-studio-800/90 hover:bg-purple-600/20 hover:text-purple-300 hover:border-purple-500/40 border border-white/10 transition-all flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                            Podcast Teknologi & AI (12:40)
+                        </button>
+                        <button onclick="fillSampleUrl('https://www.youtube.com/watch?v=startup-founder-2026')" class="px-2.5 py-1 rounded-lg bg-studio-800/90 hover:bg-blue-600/20 hover:text-blue-300 hover:border-blue-500/40 border border-white/10 transition-all flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                            Tips Bisnis & Produktivitas (08:15)
+                        </button>
+                        <button onclick="fillSampleUrl('https://www.tiktok.com/@creator/video/7392019283')" class="px-2.5 py-1 rounded-lg bg-studio-800/90 hover:bg-cyan-600/20 hover:text-cyan-300 hover:border-cyan-500/40 border border-white/10 transition-all flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                            Keynote Presentasi Startup (15:02)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Local File Upload -->
+                <div id="panel-upload" class="hidden mb-8">
+                    <label for="local-video-input" id="dropzone" class="flex flex-col items-center justify-center w-full h-44 border-2 border-dashed border-purple-500/40 hover:border-purple-400 rounded-2xl bg-studio-950/80 hover:bg-studio-900/90 cursor-pointer transition-all p-4 text-center">
+                        <div class="w-12 h-12 rounded-full bg-purple-500/15 flex items-center justify-center mb-3 text-purple-400">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                        </div>
+                        <p id="upload-filename" class="text-sm font-semibold text-white mb-1">Klik untuk memilih video atau seret file ke sini</p>
+                        <p id="upload-meta" class="text-xs text-zinc-400">Mendukung MP4, WebM, MOV (Pemrosesan 100% langsung di browser Anda)</p>
+                        <input id="local-video-input" type="file" accept="video/mp4,video/webm,video/quicktime,video/*" class="hidden" onchange="handleFileUpload(event)">
+                    </label>
+                </div>
+
+                <!-- AI Clipping Settings Grid -->
+                <div class="border-t border-white/10 pt-6 mb-7">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                            Pengaturan Pemotongan Otomatis
+                        </h3>
+                        <span class="text-xs text-purple-400 font-medium">Mode Presisi AI</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <!-- Setting 1: Target Duration (30s - 60s) -->
+                        <div class="bg-studio-950/90 p-4 rounded-xl border border-white/10 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="text-xs font-semibold text-zinc-300">Target Durasi Klip</label>
+                                    <span id="duration-badge" class="px-2.5 py-0.5 rounded-md bg-purple-600/20 text-purple-300 border border-purple-500/30 text-xs font-bold">45 Detik</span>
+                                </div>
+                                <input type="range" id="duration-slider" min="30" max="60" step="5" value="45" oninput="updateDurationUI(this.value)" class="w-full my-2">
+                            </div>
+                            <div class="grid grid-cols-4 gap-1.5 mt-2">
+                                <button type="button" onclick="setDurationPreset(30)" class="dur-btn py-1 rounded-lg text-[11px] font-semibold bg-studio-800 text-zinc-300 hover:bg-purple-600 hover:text-white transition-colors">30s</button>
+                                <button type="button" onclick="setDurationPreset(45)" class="dur-btn py-1 rounded-lg text-[11px] font-semibold bg-purple-600 text-white transition-colors">45s</button>
+                                <button type="button" onclick="setDurationPreset(60)" class="dur-btn py-1 rounded-lg text-[11px] font-semibold bg-studio-800 text-zinc-300 hover:bg-purple-600 hover:text-white transition-colors">60s</button>
+                                <button type="button" onclick="setDurationPreset('auto')" class="dur-btn py-1 rounded-lg text-[11px] font-semibold bg-studio-800 text-zinc-300 hover:bg-purple-600 hover:text-white transition-colors">30-60s</button>
+                            </div>
+                        </div>
+
+                        <!-- Setting 2: Aspect Ratio -->
+                        <div class="bg-studio-950/90 p-4 rounded-xl border border-white/10 flex flex-col justify-between">
+                            <label class="text-xs font-semibold text-zinc-300 mb-3 block">Rasio Aspek Output</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" onclick="selectAspectRatio('9:16', this)" class="ratio-btn active flex flex-col items-center justify-center p-2.5 rounded-xl border border-purple-500 bg-purple-500/15 text-white transition-all">
+                                    <div class="w-3.5 h-6 border-2 border-current rounded-sm mb-1.5"></div>
+                                    <span class="text-xs font-bold">9:16</span>
+                                    <span class="text-[10px] text-zinc-400">Shorts/Reels</span>
+                                </button>
+                                <button type="button" onclick="selectAspectRatio('1:1', this)" class="ratio-btn flex flex-col items-center justify-center p-2.5 rounded-xl border border-white/10 bg-studio-800/60 text-zinc-400 hover:text-white transition-all">
+                                    <div class="w-5 h-5 border-2 border-current rounded-sm mb-1.5"></div>
+                                    <span class="text-xs font-bold">1:1</span>
+                                    <span class="text-[10px] text-zinc-500">Feed Persegi</span>
+                                </button>
+                                <button type="button" onclick="selectAspectRatio('16:9', this)" class="ratio-btn flex flex-col items-center justify-center p-2.5 rounded-xl border border-white/10 bg-studio-800/60 text-zinc-400 hover:text-white transition-all">
+                                    <div class="w-6 h-3.5 border-2 border-current rounded-sm mb-1.5"></div>
+                                    <span class="text-xs font-bold">16:9</span>
+                                    <span class="text-[10px] text-zinc-500">YouTube</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Setting 3: AI Smart Toggles & Caption Style -->
+                        <div class="bg-studio-950/90 p-4 rounded-xl border border-white/10 flex flex-col justify-between space-y-2.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-medium text-zinc-200">Auto-Caption Dinamis</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="toggle-caption" checked class="sr-only peer">
+                                    <div class="w-9 h-5 bg-studio-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-medium text-zinc-200">Deteksi Momen Viral</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="toggle-viral" checked class="sr-only peer">
+                                    <div class="w-9 h-5 bg-studio-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-medium text-zinc-200">Auto-Reframe Wajah</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="toggle-reframe" checked class="sr-only peer">
+                                    <div class="w-9 h-5 bg-studio-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-600"></div>
+                                </label>
+                            </div>
+                            <div class="pt-1 border-t border-white/5 flex items-center justify-between gap-2">
+                                <span class="text-[11px] text-zinc-400">Gaya Teks:</span>
+                                <select id="caption-style-select" class="bg-studio-800 text-xs text-white rounded-lg px-2 py-1 border border-white/10 focus:outline-none focus:border-purple-500">
+                                    <option value="hormozi">Hormozi Bold (Kuning/Putih)</option>
+                                    <option value="neon">Neon Cyber (Ungu/Cyan)</option>
+                                    <option value="minimal">Clean Subtitle Box</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Primary CTA Button -->
+                <button onclick="startAIAnalysis()" class="w-full py-4 px-6 rounded-xl font-bold text-base text-white bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 hover:from-purple-500 hover:via-blue-500 hover:to-cyan-400 shadow-lg shadow-purple-600/30 hover:shadow-purple-500/50 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-3">
+                    <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    <span>Generate Klip Viral Otomatis Sekarang</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- SECTION 2: INTERACTIVE AI ANALYSIS LOADING -->
+        <section id="loading-section" class="hidden max-w-2xl mx-auto py-12 text-center">
+            <div class="glass-panel rounded-3xl p-8 sm:p-10 border border-purple-500/30 shadow-2xl shadow-purple-900/20">
+                <!-- Animated Scanner Ring -->
+                <div class="relative w-24 h-24 mx-auto mb-6">
+                    <div class="absolute inset-0 rounded-full border-4 border-purple-500/20"></div>
+                    <div class="absolute inset-0 rounded-full border-4 border-t-purple-500 border-r-blue-500 border-b-cyan-400 border-l-transparent animate-spin"></div>
+                    <div class="absolute inset-3 rounded-full bg-studio-900 flex items-center justify-center">
+                        <span id="loading-percent" class="text-lg font-extrabold text-white">0%</span>
+                    </div>
+                </div>
+
+                <h2 id="loading-title" class="text-xl sm:text-2xl font-bold text-white mb-2">Menganalisis Struktur Video...</h2>
+                <p id="loading-subtitle" class="text-sm text-zinc-400 mb-6">AI sedang memindai transkrip audio dan mencari hook dengan retensi tertinggi.</p>
+
+                <!-- Progress Bar -->
+                <div class="w-full h-2.5 bg-studio-950 rounded-full overflow-hidden mb-6 border border-white/5">
+                    <div id="loading-bar" class="h-full bg-gradient-to-r from-purple-600 via-blue-500 to-cyan-400 transition-all duration-300" style="width: 0%"></div>
+                </div>
+
+                <!-- Step Checklist -->
+                <div class="space-y-2.5 text-left max-w-md mx-auto text-xs sm:text-sm">
+                    <div id="step-1" class="flex items-center gap-3 text-zinc-400">
+                        <span class="w-5 h-5 rounded-full bg-studio-800 flex items-center justify-center text-[10px]">1</span>
+                        <span>Ekstraksi metadata video & pemetaan gelombang suara</span>
+                    </div>
+                    <div id="step-2" class="flex items-center gap-3 text-zinc-400">
+                        <span class="w-5 h-5 rounded-full bg-studio-800 flex items-center justify-center text-[10px]">2</span>
+                        <span>Identifikasi Hook & Skor Viralitas (30s - 60s)</span>
+                    </div>
+                    <div id="step-3" class="flex items-center gap-3 text-zinc-400">
+                        <span class="w-5 h-5 rounded-full bg-studio-800 flex items-center justify-center text-[10px]">3</span>
+                        <span>Auto-Reframe wajah & sinkronisasi Auto-Caption</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: RESULTS WORKSPACE & REAL-TIME PREVIEW -->
+        <section id="results-section" class="hidden space-y-6">
+            <!-- Workspace Top Bar -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-4 rounded-2xl">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-bold">3 Klip Viral Ditemukan</span>
+                        <span id="source-badge" class="text-xs text-zinc-400 truncate max-w-[220px] sm:max-w-xs">Sumber: Video Sampel AI</span>
+                    </div>
+                    <h2 class="text-lg sm:text-xl font-bold text-white mt-1">Hasil Rekomendasi Klip Terbaik</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="resetApp()" class="px-4 py-2 rounded-xl bg-studio-800 hover:bg-studio-700 text-xs sm:text-sm font-medium text-zinc-200 border border-white/10 transition-all flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"/></svg>
+                        <span>Buat Proyek Baru</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Split View: Left = Clip Cards, Right = Interactive Preview Studio -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                <!-- Left Column: 3 Recommended Clips (7 cols on lg) -->
+                <div class="lg:col-span-7 space-y-4" id="clips-list-container">
+                    <!-- Clip cards will be injected dynamically via JS -->
+                </div>
+
+                <!-- Right Column: Interactive Video Player & Export Studio (5 cols on lg) -->
+                <div class="lg:col-span-5 lg:sticky lg:top-20 glass-panel rounded-2xl p-4 sm:p-5 border border-white/10">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-purple-500 animate-pulse"></span>
+                            <h3 class="text-sm font-bold text-white">Pratinjau Studio Real-Time</h3>
+                        </div>
+                        <span id="preview-ratio-badge" class="px-2 py-0.5 rounded bg-studio-800 text-[11px] font-semibold text-purple-300 border border-white/10">9:16 Vertikal</span>
+                    </div>
+
+                    <!-- Canvas Preview Wrapper -->
+                    <div class="relative w-full bg-black rounded-xl overflow-hidden border border-white/10 flex items-center justify-center shadow-inner" style="min-height: 360px;">
+                        <canvas id="preview-canvas" class="max-w-full max-h-[440px] rounded-lg shadow-2xl"></canvas>
+                        
+                        <!-- Hidden source video element for local video processing -->
+                        <video id="source-video-element" class="hidden" playsinline muted crossorigin="anonymous"></video>
+
+                        <!-- Rendering Overlay (Shown during MP4 Export) -->
+                        <div id="export-overlay" class="hidden absolute inset-0 bg-studio-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+                            <div class="w-14 h-14 rounded-full border-4 border-purple-500/30 border-t-purple-500 animate-spin mb-4"></div>
+                            <h4 class="text-base font-bold text-white mb-1">Merender File MP4...</h4>
+                            <p id="export-status-text" class="text-xs text-zinc-400 mb-3">Menggabungkan frame video, rasio aspek & subtitle dinamis</p>
+                            <div class="w-48 h-2 bg-studio-800 rounded-full overflow-hidden">
+                                <div id="export-progress-bar" class="h-full bg-gradient-to-r from-purple-500 to-cyan-400 transition-all duration-150" style="width: 0%"></div>
+                            </div>
+                            <span id="export-percent-text" class="text-xs font-bold text-purple-300 mt-2">0%</span>
+                        </div>
+                    </div>
+
+                    <!-- Player Controls -->
+                    <div class="mt-4 space-y-3">
+                        <!-- Timeline Scrubber -->
+                        <div class="flex items-center gap-3 text-xs text-zinc-400">
+                            <span id="player-current-time" class="font-mono w-10">00:00</span>
+                            <div class="flex-grow h-1.5 bg-studio-800 rounded-full overflow-hidden cursor-pointer" onclick="seekPreview(event)">
+                                <div id="player-progress-fill" class="h-full bg-gradient-to-r from-purple-500 to-blue-500 w-0"></div>
+                            </div>
+                            <span id="player-total-time" class="font-mono w-10 text-right">00:45</span>
+                        </div>
+
+                        <!-- Control Buttons -->
+                        <div class="flex items-center justify-between gap-2 pt-1">
+                            <div class="flex items-center gap-2">
+                                <button id="btn-play-pause" onclick="togglePlayPause()" class="p-2.5 rounded-xl bg-studio-800 hover:bg-studio-700 text-white border border-white/10 transition-colors" title="Putar / Jeda">
+                                    <svg id="icon-pause" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                    <svg id="icon-play" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
+                                </button>
+                                <button onclick="toggleCaptionPreview()" id="btn-toggle-sub-live" class="px-3 py-2 rounded-xl bg-purple-600/20 text-purple-300 border border-purple-500/30 text-xs font-semibold hover:bg-purple-600/30 transition-colors">
+                                    CC: Aktif
+                                </button>
+                            </div>
+
+                            <button id="btn-download-active" onclick="exportAndDownloadClip(activeClipIndex)" class="flex-grow sm:flex-grow-0 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-purple-600/25 flex items-center justify-center gap-2 transition-all">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                <span>Unduh MP4 Klip #<span id="active-clip-num">1</span></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Educational Footer Note -->
+    <footer class="border-t border-white/10 bg-studio-900/80 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-studio-950/90 p-4 rounded-2xl border border-white/5">
+                <div class="flex items-start gap-3">
+                    <div class="p-2 rounded-lg bg-blue-500/10 text-blue-400 shrink-0 mt-0.5">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <div class="text-xs text-zinc-400 leading-relaxed">
+                        <strong class="text-zinc-200">Catatan Teknis & Arsitektur Browser:</strong> Aplikasi ini memproses pemotongan video, rasio aspek, dan rendering subtitle secara langsung di browser menggunakan <em>HTML5 Canvas & MediaRecorder API</em>. Karena kebijakan keamanan <strong>CORS</strong> browser membatasi penarikan stream mentah langsung dari server YouTube/TikTok, input URL menggunakan generator visual sampel interaktif, sedangkan tab <strong>Unggah Video Lokal</strong> memproses file MP4/WebM asli Anda. Untuk menarik video langsung dari URL YouTube/TikTok di server lokal, klik tombol <button onclick="openBackendModal()" class="text-purple-400 underline hover:text-purple-300 font-medium">Kode Backend Server (Python yt-dlp + FFmpeg)</button>.
+                    </div>
+                </div>
+                <div class="text-[11px] text-zinc-500 shrink-0">
+                    © 2026 AutoClip AI Studio
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal: Backend Python (yt-dlp + FFmpeg) Code -->
+    <div id="backend-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="glass-panel border border-white/15 rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between pb-4 border-b border-white/10">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 rounded-lg bg-purple-500/20 text-purple-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-white">Kode Backend Lokal (Python + yt-dlp + FFmpeg)</h3>
+                        <p class="text-xs text-zinc-400">Jalankan script ini di komputer/VPS Anda untuk memotong langsung dari URL YouTube/TikTok</p>
+                    </div>
+                </div>
+                <button onclick="closeBackendModal()" class="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-studio-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="my-4 overflow-y-auto flex-grow bg-studio-950 rounded-xl p-4 border border-white/10 font-mono text-xs text-zinc-300 relative">
+                <button onclick="copyBackendCode()" class="sticky top-0 float-right px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-sans text-xs font-semibold shadow-md transition-colors">
+                    Salin Kode
+                </button>
+<pre id="python-code-block" class="leading-relaxed whitespace-pre-wrap"># Install dependensi terlebih dahulu:
+# pip install yt-dlp fastapi uvicorn
+# Pastikan FFmpeg sudah terinstal di sistem Anda
+
+import subprocess
+import yt_dlp
+
+def buat_klip_otomatis(url_video: str, mulai_detik: int = 15, durasi: int = 45, output_file: str = "klip_viral_9x16.mp4"):
+    """
+    Mengunduh video dari YouTube/TikTok/IG lalu memotongnya menjadi
+    klip vertikal 9:16 (1080x1920) berdurasi 30-60 detik menggunakan FFmpeg.
+    """
+    temp_video = "source_temp.mp4"
+    
+    # 1. Unduh video kualitas terbaik menggunakan yt-dlp
+    ydl_opts = {
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]',
+        'outtmpl': temp_video,
+        'quiet': True
+    }
+    print(f"Mengunduh video dari: {url_video}...")
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([url_video])
+
+    # 2. Potong segmen (30s - 60s) & crop tengah ke rasio vertikal 9:16
+    print(f"Memotong klip durasi {durasi} detik mulai dari detik ke-{mulai_detik}...")
+    ffmpeg_cmd = [
+        "ffmpeg", "-y",
+        "-ss", str(mulai_detik),
+        "-i", temp_video,
+        "-t", str(durasi),
+        "-vf", "crop=ih*(9/16):ih,scale=1080:1920",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "22",
+        "-c:a", "aac", "-b:a", "128k",
+        output_file
+    ]
+    subprocess.run(ffmpeg_cmd, check=True)
+    print(f"Selesai! File tersimpan di: {output_file}")
+
+if __name__ == "__main__":
+    # Contoh pemakaian langsung:
+    buat_klip_otomatis("https://www.youtube.com/watch?v=dQw4w9WgXcQ", mulai_detik=20, durasi=45)</pre>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button onclick="closeBackendModal()" class="px-4 py-2 rounded-xl bg-studio-800 hover:bg-studio-700 text-xs font-semibold text-white">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // STATE MANAGEMENT
+        // ==========================================
+        let currentInputMode = 'link'; // 'link' | 'upload'
+        let uploadedVideoFile = null;
+        let uploadedVideoUrl = null;
+        let videoDurationSec = 180; // Default virtual duration for sample URL
+        
+        let selectedDuration = 45; // 30 to 60 seconds, or 'auto'
+        let selectedRatio = '9:16'; // '9:16', '1:1', '16:9'
+        let generatedClips = [];
+        let activeClipIndex = 0;
+
+        // Player & Canvas Loop State
+        let isPlaying = false;
+        let previewStartTime = 0;
+        let pausedElapsed = 0;
+        let animationFrameId = null;
+        let isExporting = false;
+
+        // ==========================================
+        // UI HELPERS & NOTIFICATIONS
+        // ==========================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colors = {
+                info: 'border-purple-500/50 bg-studio-900/95 text-white',
+                success: 'border-emerald-500/50 bg-studio-900/95 text-emerald-300',
+                error: 'border-rose-500/50 bg-studio-900/95 text-rose-300'
+            };
+            toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-xl text-xs sm:text-sm font-medium transition-all duration-300 transform translate-x-0 ${colors[type] || colors.info}`;
+            toast.innerHTML = `
+                <span class="w-2 h-2 rounded-full ${type === 'success' ? 'bg-emerald-400' : type === 'error' ? 'bg-rose-400' : 'bg-purple-400'}"></span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function switchInputTab(mode) {
+            currentInputMode = mode;
+            const tabLink = document.getElementById('tab-link');
+            const tabUpload = document.getElementById('tab-upload');
+            const panelLink = document.getElementById('panel-link');
+            const panelUpload = document.getElementById('panel-upload');
+
+            if (mode === 'link') {
+                tabLink.className = 'flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md';
+                tabUpload.className = 'flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all text-zinc-400 hover:text-white';
+                panelLink.classList.remove('hidden');
+                panelUpload.classList.add('hidden');
+            } else {
+                tabUpload.className = 'flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md';
+                tabLink.className = 'flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all text-zinc-400 hover:text-white';
+                panelUpload.classList.remove('hidden');
+                panelLink.classList.add('hidden');
+            }
+        }
+
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    document.getElementById('video-url-input').value = text;
+                    showToast('Tautan berhasil ditempel!', 'success');
+                }
+            } catch (err) {
+                showToast('Gunakan Ctrl+V / Cmd+V untuk menempel tautan.', 'info');
+                document.getElementById('video-url-input').focus();
+            }
+        }
+
+        function fillSampleUrl(url) {
+            document.getElementById('video-url-input').value = url;
+            showToast('Tautan sampel dipilih. Klik "Generate Klip Viral"!', 'success');
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('video/')) {
+                showToast('Harap pilih file video yang valid (MP4/WebM/MOV).', 'error');
+                return;
+            }
+            uploadedVideoFile = file;
+            if (uploadedVideoUrl) URL.revokeObjectURL(uploadedVideoUrl);
+            uploadedVideoUrl = URL.createObjectURL(file);
+
+            const videoEl = document.getElementById('source-video-element');
+            videoEl.src = uploadedVideoUrl;
+            videoEl.onloadedmetadata = () => {
+                videoDurationSec = videoEl.duration || 60;
+                const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                document.getElementById('upload-filename').textContent = file.name;
+                document.getElementById('upload-meta').textContent = `Durasi: ${formatTime(videoDurationSec)} • Ukuran: ${sizeMB} MB • Siap Dipotong`;
+                showToast(`Video "${file.name}" siap diproses!`, 'success');
+            };
+        }
+
+        // Drag and drop support
+        const dropzone = document.getElementById('dropzone');
+        if (dropzone) {
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('border-purple-400', 'bg-studio-900');
+            });
+            dropzone.addEventListener('dragleave', () => {
+                dropzone.classList.remove('border-purple-400', 'bg-studio-900');
+            });
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('border-purple-400', 'bg-studio-900');
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    document.getElementById('local-video-input').files = e.dataTransfer.files;
+                    handleFileUpload({ target: { files: e.dataTransfer.files } });
+                }
+            });
+        }
+
+        function updateDurationUI(val) {
+            selectedDuration = parseInt(val, 10);
+            document.getElementById('duration-badge').textContent = `${selectedDuration} Detik`;
+            document.querySelectorAll('.dur-btn').forEach(btn => {
+                btn.className = 'dur-btn py-1 rounded-lg text-[11px] font-semibold bg-studio-800 text-zinc-300 hover:bg-purple-600 hover:text-white transition-colors';
+            });
+        }
+
+        function setDurationPreset(val) {
+            const slider = document.getElementById('duration-slider');
+            if (val === 'auto') {
+                selectedDuration = 'auto';
+                document.getElementById('duration-badge').textContent = '30s - 60s (Auto)';
+            } else {
+                selectedDuration = val;
+                slider.value = val;
+                document.getElementById('duration-badge').textContent = `${val} Detik`;
+            }
+            document.querySelectorAll('.dur-btn').forEach(btn => {
+                const isMatch = (val === 'auto' && btn.textContent.includes('30-60')) || btn.textContent === `${val}s`;
+                btn.className = isMatch
+                    ? 'dur-btn py-1 rounded-lg text-[11px] font-semibold bg-purple-600 text-white transition-colors'
+                    : 'dur-btn py-1 rounded-lg text-[11px] font-semibold bg-studio-800 text-zinc-300 hover:bg-purple-600 hover:text-white transition-colors';
+            });
+        }
+
+        function selectAspectRatio(ratio, btnEl) {
+            selectedRatio = ratio;
+            document.querySelectorAll('.ratio-btn').forEach(btn => {
+                btn.className = 'ratio-btn flex flex-col items-center justify-center p-2.5 rounded-xl border border-white/10 bg-studio-800/60 text-zinc-400 hover:text-white transition-all';
+            });
+            btnEl.className = 'ratio-btn active flex flex-col items-center justify-center p-2.5 rounded-xl border border-purple-500 bg-purple-500/15 text-white transition-all';
+        }
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60);
+            const s = Math.floor(sec % 60);
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        // ==========================================
+        // AI ANALYSIS SIMULATION & CLIP GENERATION
+        // ==========================================
+        function startAIAnalysis() {
+            const urlVal = document.getElementById('video-url-input').value.trim();
+
+            if (currentInputMode === 'link' && !urlVal) {
+                // Auto-fill sample URL for frictionless UX if empty, or prompt
+                fillSampleUrl('https://www.youtube.com/watch?v=podcast-teknologi-ai-2026');
+            } else if (currentInputMode === 'upload' && !uploadedVideoFile) {
+                showToast('Silakan unggah file video terlebih dahulu atau gunakan tab Tautan.', 'error');
+                return;
+            }
+
+            // Switch to Loading View
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('results-section').classList.add('hidden');
+            document.getElementById('loading-section').classList.remove('hidden');
+
+            let progress = 0;
+            const bar = document.getElementById('loading-bar');
+            const pct = document.getElementById('loading-percent');
+            const title = document.getElementById('loading-title');
+            const sub = document.getElementById('loading-subtitle');
+
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 14) + 8;
+                if (progress > 100) progress = 100;
+
+                bar.style.width = `${progress}%`;
+                pct.textContent = `${progress}%`;
+
+                if (progress >= 25) markStepDone('step-1');
+                if (progress >= 60) {
+                    markStepDone('step-2');
+                    title.textContent = 'Mendeteksi Hook & Skor Viralitas...';
+                    sub.textContent = 'Menyeleksi segmen terbaik berdurasi 30s - 60s dengan potensi FYP tinggi.';
+                }
+                if (progress >= 85) {
+                    markStepDone('step-3');
+                    title.textContent = 'Menyiapkan Auto-Caption & Rasio ' + selectedRatio + '...';
+                }
+
+                if (progress === 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        buildGeneratedClips();
+                        renderResultsUI();
+                    }, 450);
+                }
+            }, 220);
+        }
+
+        function markStepDone(stepId) {
+            const el = document.getElementById(stepId);
+            el.classList.remove('text-zinc-400');
+            el.classList.add('text-emerald-400', 'font-medium');
+            el.querySelector('span').className = 'w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold';
+            el.querySelector('span').textContent = '✓';
+        }
+
+        function buildGeneratedClips() {
+            const maxDur = currentInputMode === 'upload' ? Math.max(10, Math.floor(videoDurationSec)) : 240;
+            const getClipLen = (offset) => {
+                let target = selectedDuration === 'auto' ? (35 + offset * 10) : selectedDuration;
+                if (currentInputMode === 'upload' && videoDurationSec < target) {
+                    target = Math.max(5, Math.floor(videoDurationSec));
+                }
+                return target;
+            };
+
+            const d1 = getClipLen(0);
+            const d2 = getClipLen(1);
+            const d3 = getClipLen(2);
+
+            const s1 = currentInputMode === 'upload' ? 0 : 14;
+            const s2 = currentInputMode === 'upload' ? Math.min(Math.floor(maxDur * 0.3), Math.max(0, maxDur - d2)) : 68;
+            const s3 = currentInputMode === 'upload' ? Math.min(Math.floor(maxDur * 0.6), Math.max(0, maxDur - d3)) : 132;
+
+            generatedClips = [
+                {
+                    id: 1,
+                    title: "Rahasia Terbesar di Balik Efisiensi AI Tahun Ini!",
+                    score: 97,
+                    startTime: s1,
+                    duration: d1,
+                    tags: ["#AI", "#Produktivitas", "#TechTrends"],
+                    accentColor: "#8b5cf6",
+                    transcript: [
+                        { at: 0, text: "Kebanyakan orang salah paham soal cara kerja AI modern..." },
+                        { at: 4, text: "Bukan soal menggantikan manusia, tapi melipatgandakan kecepatan." },
+                        { at: 9, text: "Lihat data ini: 80% waktu editing habis hanya untuk hal repetitif." },
+                        { at: 15, text: "Dengan otomatisasi cerdas, satu ide bisa jadi puluhan konten." },
+                        { at: 22, text: "Kuncinya ada pada 3 detik pertama yang memancing rasa penasaran!" },
+                        { at: 30, text: "Simpan video ini sekarang sebelum algoritma berubah lagi." }
+                    ]
+                },
+                {
+                    id: 2,
+                    title: "Kesalahan Fatal Kreator Pemula Saat Membuat Konten Pendek",
+                    score: 92,
+                    startTime: s2,
+                    duration: d2,
+                    tags: ["#Kreator", "#TipsViral", "#Growth"],
+                    accentColor: "#3b82f6",
+                    transcript: [
+                        { at: 0, text: "Stop memulai video Anda dengan sapaan yang terlalu panjang!" },
+                        { at: 5, text: "Penonton memutuskan scroll dalam waktu kurang dari dua detik." },
+                        { at: 11, text: "Langsung berikan konflik, hasil akhir, atau pertanyaan tajam." },
+                        { at: 18, text: "Gunakan teks dinamis di layar agar penonton tanpa suara tetap paham." },
+                        { at: 26, text: "Terapkan pola ini di 5 video berikutnya dan lihat lonjakan views-nya." }
+                    ]
+                },
+                {
+                    id: 3,
+                    title: "Strategi 30 Detik Mengubah Podcast Panjang Jadi Mesin Traffic",
+                    score: 89,
+                    startTime: s3,
+                    duration: d3,
+                    tags: ["#Podcast", "#ContentRepurposing", "#Bisnis"],
+                    accentColor: "#06b6d4",
+                    transcript: [
+                        { at: 0, text: "Satu sesi rekaman 30 menit menyimpan minimal 10 emas tersembunyi." },
+                        { at: 6, text: "Potong bagian dengan intonasi paling emosional dan padat insight." },
+                        { at: 13, text: "Ubah rasio ke 9:16 agar memenuhi layar smartphone secara penuh." },
+                        { at: 20, text: "Konsistensi upload setiap hari jauh lebih kuat daripada sekadar viral sekali." }
+                    ]
+                }
+            ];
+        }
+
+        function renderResultsUI() {
+            document.getElementById('loading-section').classList.add('hidden');
+            document.getElementById('results-section').classList.remove('hidden');
+
+            const sourceLabel = currentInputMode === 'upload' && uploadedVideoFile
+                ? `File Lokal: ${uploadedVideoFile.name}`
+                : `Tautan: ${document.getElementById('video-url-input').value}`;
+            document.getElementById('source-badge').textContent = sourceLabel;
+            document.getElementById('preview-ratio-badge').textContent = `${selectedRatio} ${selectedRatio === '9:16' ? 'Vertikal' : selectedRatio === '1:1' ? 'Persegi' : 'Landscape'}`;
+
+            const container = document.getElementById('clips-list-container');
+            container.innerHTML = '';
+
+            generatedClips.forEach((clip, idx) => {
+                const isSelected = idx === activeClipIndex;
+                const card = document.createElement('div');
+                card.id = `clip-card-${idx}`;
+                card.onclick = () => selectClipForPreview(idx);
+                card.className = `cursor-pointer rounded-2xl p-4 sm:p-5 transition-all border ${
+                    isSelected
+                        ? 'bg-studio-850 border-purple-500 shadow-lg shadow-purple-900/20'
+                        : 'glass-panel border-white/10 hover:border-white/25'
+                }`;
+
+                const fullTranscriptText = clip.transcript.map(t => t.text).join(' ');
+
+                card.innerHTML = `
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center font-extrabold text-sm text-white shrink-0 mt-0.5">
+                                #${clip.id}
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white text-sm sm:text-base leading-snug">${clip.title}</h3>
+                                <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-zinc-400">
+                                    <span class="px-2 py-0.5 rounded bg-studio-950 border border-white/10 font-mono text-zinc-300">
+                                        ${formatTime(clip.startTime)} - ${formatTime(clip.startTime + clip.duration)}
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 font-semibold">
+                                        Durasi ${clip.duration}s
+                                    </span>
+                                    ${clip.tags.map(t => `<span class="text-zinc-500">${t}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Viral Score Badge -->
+                        <div class="flex sm:flex-col items-center sm:items-end justify-between bg-studio-950/90 px-3 py-1.5 rounded-xl border border-emerald-500/30 shrink-0">
+                            <span class="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">Skor Viral</span>
+                            <div class="flex items-baseline gap-0.5">
+                                <span class="text-lg font-black text-emerald-400">${clip.score}</span>
+                                <span class="text-[11px] text-zinc-500">/100</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transcript Snippet -->
+                    <p class="text-xs text-zinc-400 bg-studio-950/70 p-3 rounded-xl border border-white/5 line-clamp-2 mb-4 leading-relaxed">
+                        "${fullTranscriptText}"
+                    </p>
+
+                    <!-- Card Footer Actions -->
+                    <div class="flex items-center justify-between gap-2">
+                        <button type="button" onclick="event.stopPropagation(); selectClipForPreview(${idx})" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                            isSelected ? 'bg-purple-600/20 text-purple-300 border border-purple-500/40' : 'bg-studio-800 text-zinc-300 hover:text-white'
+                        }">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
+                            <span>${isSelected ? 'Sedang Dipratinjau' : 'Pratinjau Klip'}</span>
+                        </button>
+
+                        <button type="button" onclick="event.stopPropagation(); exportAndDownloadClip(${idx})" class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <span>Unduh MP4</span>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            selectClipForPreview(0);
+        }
+
+        // ==========================================
+        // INTERACTIVE CANVAS VIDEO PREVIEW ENGINE
+        // ==========================================
+        function setupCanvasDimensions(canvas) {
+            if (selectedRatio === '9:16') {
+                canvas.width = 450;
+                canvas.height = 800;
+            } else if (selectedRatio === '1:1') {
+                canvas.width = 600;
+                canvas.height = 600;
+            } else {
+                canvas.width = 800;
+                canvas.height = 450;
+            }
+        }
+
+        function selectClipForPreview(index) {
+            activeClipIndex = index;
+            const clip = generatedClips[index];
+            document.getElementById('active-clip-num').textContent = clip.id;
+            document.getElementById('player-total-time').textContent = formatTime(clip.duration);
+
+            // Highlight active card
+            generatedClips.forEach((_, idx) => {
+                const card = document.getElementById(`clip-card-${idx}`);
+                if (!card) return;
+                if (idx === index) {
+                    card.className = 'cursor-pointer rounded-2xl p-4 sm:p-5 transition-all border bg-studio-850 border-purple-500 shadow-lg shadow-purple-900/20';
+                } else {
+                    card.className = 'cursor-pointer rounded-2xl p-4 sm:p-5 transition-all border glass-panel border-white/10 hover:border-white/25';
+                }
+            });
+
+            const canvas = document.getElementById('preview-canvas');
+            setupCanvasDimensions(canvas);
+
+            // Reset playback position
+            pausedElapsed = 0;
+            previewStartTime = performance.now();
+
+            if (currentInputMode === 'upload' && uploadedVideoUrl) {
+                const videoEl = document.getElementById('source-video-element');
+                videoEl.currentTime = clip.startTime;
+                videoEl.play().catch(() => {});
+            }
+
+            isPlaying = true;
+            updatePlayPauseIcons();
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            renderLoop();
+        }
+
+        function togglePlayPause() {
+            if (isExporting) return;
+            const clip = generatedClips[activeClipIndex];
+            const videoEl = document.getElementById('source-video-element');
+
+            if (isPlaying) {
+                isPlaying = false;
+                pausedElapsed = (performance.now() - previewStartTime) / 1000;
+                if (currentInputMode === 'upload') videoEl.pause();
+            } else {
+                isPlaying = true;
+                previewStartTime = performance.now() - (pausedElapsed * 1000);
+                if (currentInputMode === 'upload') {
+                    videoEl.currentTime = clip.startTime + pausedElapsed;
+                    videoEl.play().catch(() => {});
+                }
+                renderLoop();
+            }
+            updatePlayPauseIcons();
+        }
+
+        function updatePlayPauseIcons() {
+            const iconPlay = document.getElementById('icon-play');
+            const iconPause = document.getElementById('icon-pause');
+            if (isPlaying) {
+                iconPause.classList.remove('hidden');
+                iconPlay.classList.add('hidden');
+            } else {
+                iconPlay.classList.remove('hidden');
+                iconPause.classList.add('hidden');
+            }
+        }
+
+        function toggleCaptionPreview() {
+            const cb = document.getElementById('toggle-caption');
+            cb.checked = !cb.checked;
+            const btn = document.getElementById('btn-toggle-sub-live');
+            btn.textContent = cb.checked ? 'CC: Aktif' : 'CC: Nonaktif';
+            btn.className = cb.checked
+                ? 'px-3 py-2 rounded-xl bg-purple-600/20 text-purple-300 border border-purple-500/30 text-xs font-semibold hover:bg-purple-600/30 transition-colors'
+                : 'px-3 py-2 rounded-xl bg-studio-800 text-zinc-400 border border-white/10 text-xs font-semibold hover:text-white transition-colors';
+        }
+
+        function seekPreview(event) {
+            if (isExporting) return;
+            const rect = event.currentTarget.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+            const clip = generatedClips[activeClipIndex];
+            pausedElapsed = ratio * clip.duration;
+            previewStartTime = performance.now() - (pausedElapsed * 1000);
+
+            if (currentInputMode === 'upload') {
+                const videoEl = document.getElementById('source-video-element');
+                videoEl.currentTime = clip.startTime + pausedElapsed;
+            }
+        }
+
+        function renderLoop() {
+            const canvas = document.getElementById('preview-canvas');
+            const ctx = canvas.getContext('2d');
+            const clip = generatedClips[activeClipIndex];
+
+            let elapsed = isPlaying ? (performance.now() - previewStartTime) / 1000 : pausedElapsed;
+
+            if (elapsed >= clip.duration) {
+                elapsed = 0;
+                pausedElapsed = 0;
+                previewStartTime = performance.now();
+                if (currentInputMode === 'upload') {
+                    const videoEl = document.getElementById('source-video-element');
+                    videoEl.currentTime = clip.startTime;
+                }
+            }
+
+            // Update Scrubber UI
+            document.getElementById('player-current-time').textContent = formatTime(elapsed);
+            document.getElementById('player-progress-fill').style.width = `${(elapsed / clip.duration) * 100}%`;
+
+            // Draw Frame to Canvas
+            drawClipFrame(ctx, canvas.width, canvas.height, clip, elapsed);
+
+            if (isPlaying || isExporting) {
+                animationFrameId = requestAnimationFrame(renderLoop);
+            }
+        }
+
+        function drawClipFrame(ctx, w, h, clip, elapsed) {
+            ctx.clearRect(0, 0, w, h);
+
+            const videoEl = document.getElementById('source-video-element');
+            const hasLocalVideo = currentInputMode === 'upload' && uploadedVideoUrl && videoEl.readyState >= 2;
+
+            if (hasLocalVideo) {
+                // Draw cropped/reframed local video
+                const vw = videoEl.videoWidth || 1280;
+                const vh = videoEl.videoHeight || 720;
+                const targetAspect = w / h;
+                const sourceAspect = vw / vh;
+
+                let sx = 0, sy = 0, sw = vw, sh = vh;
+                if (sourceAspect > targetAspect) {
+                    sw = vh * targetAspect;
+                    // Subtle dynamic pan if Auto-Reframe is enabled
+                    const reframeEnabled = document.getElementById('toggle-reframe').checked;
+                    const panOffset = reframeEnabled ? Math.sin(elapsed * 0.8) * ((vw - sw) * 0.15) : 0;
+                    sx = (vw - sw) / 2 + panOffset;
+                } else {
+                    sh = vw / targetAspect;
+                    sy = (vh - sh) / 2;
+                }
+                ctx.drawImage(videoEl, sx, sy, sw, sh, 0, 0, w, h);
+
+                // Subtle bottom vignette for caption legibility
+                const grad = ctx.createLinearGradient(0, h * 0.55, 0, h);
+                grad.addColorStop(0, 'rgba(0,0,0,0)');
+                grad.addColorStop(1, 'rgba(0,0,0,0.75)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, h * 0.55, w, h * 0.45);
+            } else {
+                // Procedural AI Studio Visual Background (for URL / Demo mode)
+                const bgGrad = ctx.createLinearGradient(0, 0, w, h);
+                bgGrad.addColorStop(0, '#0f0c29');
+                bgGrad.addColorStop(0.5, '#1e1b4b');
+                bgGrad.addColorStop(1, '#09090b');
+                ctx.fillStyle = bgGrad;
+                ctx.fillRect(0, 0, w, h);
+
+                // Animated Glowing Orbs
+                const orbX = w * 0.5 + Math.cos(elapsed * 1.2) * (w * 0.25);
+                const orbY = h * 0.35 + Math.sin(elapsed * 0.9) * (h * 0.12);
+                const radGrad = ctx.createRadialGradient(orbX, orbY, 10, orbX, orbY, w * 0.55);
+                radGrad.addColorStop(0, clip.accentColor + '55');
+                radGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = radGrad;
+                ctx.fillRect(0, 0, w, h);
+
+                // Simulated Speaker / Podcast Card Visual
+                const cardW = w * 0.78;
+                const cardH = h * 0.34;
+                const cardX = (w - cardW) / 2;
+                const cardY = h * 0.16;
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+                roundRect(ctx, cardX, cardY, cardW, cardH, 20, true, false);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+                ctx.lineWidth = 1.5;
+                roundRect(ctx, cardX, cardY, cardW, cardH, 20, false, true);
+
+                // Avatar Circle + Audio Waveform Bars
+                const centerX = w / 2;
+                const avatarY = cardY + cardH * 0.38;
+                ctx.beginPath();
+                ctx.arc(centerX, avatarY, Math.min(w, h) * 0.085, 0, Math.PI * 2);
+                ctx.fillStyle = clip.accentColor;
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = `bold ${Math.round(w * 0.04)}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('AI PODCAST', centerX, avatarY + 6);
+
+                // Dynamic Audio Visualizer Bars
+                const barCount = 18;
+                const barWidth = (cardW * 0.65) / barCount;
+                const startBarX = centerX - (barCount * barWidth) / 2;
+                const baseBarY = cardY + cardH * 0.78;
+
+                for (let i = 0; i < barCount; i++) {
+                    const wave = Math.abs(Math.sin(elapsed * 7 + i * 0.65)) * (cardH * 0.22) + 6;
+                    ctx.fillStyle = i % 2 === 0 ? '#a855f7' : '#38bdf8';
+                    roundRect(ctx, startBarX + i * barWidth + 2, baseBarY - wave / 2, barWidth - 4, wave, 3, true, false);
+                }
+            }
+
+            // Top Hook Title Banner
+            ctx.fillStyle = 'rgba(9, 9, 11, 0.72)';
+            roundRect(ctx, w * 0.06, h * 0.04, w * 0.88, h * 0.075, 12, true, false);
+            ctx.fillStyle = '#e4e4e7';
+            ctx.font = `700 ${Math.max(12, Math.round(w * 0.031))}px Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            const shortTitle = clip.title.length > 42 ? clip.title.substring(0, 40) + '...' : clip.title;
+            ctx.fillText(shortTitle, w / 2, h * 0.04 + (h * 0.075) * 0.63);
+
+            // Auto-Caption Overlay (if enabled)
+            if (document.getElementById('toggle-caption').checked) {
+                drawDynamicCaption(ctx, w, h, clip, elapsed);
+            }
+
+            // Subtle Watermark & Time Pill
+            ctx.fillStyle = 'rgba(255,255,255,0.45)';
+            ctx.font = `600 ${Math.max(10, Math.round(w * 0.024))}px Inter, sans-serif`;
+            ctx.textAlign = 'right';
+            ctx.fillText(`AutoClip AI • ${Math.ceil(clip.duration - elapsed)}s`, w * 0.94, h * 0.965);
+        }
+
+        function drawDynamicCaption(ctx, w, h, clip, elapsed) {
+            // Find active transcript line
+            let currentLine = clip.transcript[0].text;
+            for (let i = 0; i < clip.transcript.length; i++) {
+                if (elapsed >= clip.transcript[i].at) {
+                    currentLine = clip.transcript[i].text;
+                }
+            }
+
+            const styleMode = document.getElementById('caption-style-select').value;
+            const words = currentLine.split(' ');
+            const activeWordIdx = Math.floor((elapsed * 3.2) % words.length);
+
+            const fontSize = Math.max(16, Math.round(w * 0.048));
+            ctx.font = `900 ${fontSize}px Montserrat, Inter, sans-serif`;
+            ctx.textAlign = 'center';
+
+            // Wrap text into lines of max 4 words
+            const lines = [];
+            for (let i = 0; i < words.length; i += 4) {
+                lines.push(words.slice(i, i + 4));
+            }
+
+            const startY = h * 0.72;
+            const lineHeight = fontSize * 1.32;
+
+            if (styleMode === 'minimal') {
+                const boxH = lines.length * lineHeight + 20;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.78)';
+                roundRect(ctx, w * 0.08, startY - fontSize, w * 0.84, boxH, 14, true, false);
+            }
+
+            let wordCounter = 0;
+            lines.forEach((lineWords, lineIdx) => {
+                const y = startY + lineIdx * lineHeight;
+                const fullLineStr = lineWords.join(' ');
+                const totalLineWidth = ctx.measureText(fullLineStr).width;
+                let cursorX = (w - totalLineWidth) / 2;
+
+                lineWords.forEach((word) => {
+                    const isHighlighted = wordCounter === activeWordIdx;
+                    const wordWidth = ctx.measureText(word + ' ').width;
+
+                    // Outline shadow for readability
+                    ctx.lineWidth = 5;
+                    ctx.strokeStyle = '#000000';
+                    ctx.strokeText(word, cursorX + wordWidth / 2, y);
+
+                    if (isHighlighted) {
+                        ctx.fillStyle = styleMode === 'neon' ? '#22d3ee' : '#facc15';
+                    } else {
+                        ctx.fillStyle = '#ffffff';
+                    }
+                    ctx.fillText(word, cursorX + wordWidth / 2, y);
+
+                    cursorX += wordWidth;
+                    wordCounter++;
+                });
+            });
+        }
+
+        function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.arcTo(x + width, y, x + width, y + height, radius);
+            ctx.arcTo(x + width, y + height, x, y + height, radius);
+            ctx.arcTo(x, y + height, x, y, radius);
+            ctx.arcTo(x, y, x + width, y, radius);
+            ctx.closePath();
+            if (fill) ctx.fill();
+            if (stroke) ctx.stroke();
+        }
+
+        // ==========================================
+        // REAL MP4 VIDEO EXPORT & DOWNLOAD (MediaRecorder)
+        // ==========================================
+        async function exportAndDownloadClip(clipIndex) {
+            if (isExporting) {
+                showToast('Proses rendering sedang berjalan, harap tunggu...', 'info');
+                return;
+            }
+
+            selectClipForPreview(clipIndex);
+            const clip = generatedClips[clipIndex];
+            const canvas = document.getElementById('preview-canvas');
+            const overlay = document.getElementById('export-overlay');
+            const progressBar = document.getElementById('export-progress-bar');
+            const percentText = document.getElementById('export-percent-text');
+            const statusText = document.getElementById('export-status-text');
+
+            isExporting = true;
+            overlay.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            percentText.textContent = '0%';
+
+            try {
+                // Capture 30fps stream from Canvas
+                const stream = canvas.captureStream(30);
+
+                // Try adding audio track if local video has audio
+                const videoEl = document.getElementById('source-video-element');
+                if (currentInputMode === 'upload' && videoEl.captureStream) {
+                    try {
+                        const vStream = videoEl.captureStream();
+                        const audioTracks = vStream.getAudioTracks();
+                        if (audioTracks.length > 0) {
+                            stream.addTrack(audioTracks[0]);
+                        }
+                    } catch (e) {
+                        // Fallback silent canvas stream if browser restricts audio capture
+                    }
+                }
+
+                // Choose best supported MIME type (MP4 if supported in Safari/Chrome 130+, else WebM saved as .mp4)
+                let mimeType = 'video/webm;codecs=vp9';
+                if (MediaRecorder.isTypeSupported('video/mp4')) {
+                    mimeType = 'video/mp4';
+                } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
+                    mimeType = 'video/webm;codecs=h264';
+                } else if (MediaRecorder.isTypeSupported('video/webm')) {
+                    mimeType = 'video/webm';
+                }
+
+                const recorder = new MediaRecorder(stream, {
+                    mimeType,
+                    videoBitsPerSecond: 3500000 // 3.5 Mbps HD quality
+                });
+
+                const chunks = [];
+                recorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size > 0) chunks.push(e.data);
+                };
+
+                recorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: 'video/mp4' });
+                    const downloadUrl = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    const safeTitle = clip.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
+                    a.href = downloadUrl;
+                    a.download = `AutoClipAI_Klip${clip.id}_${clip.duration}s_${safeTitle}.mp4`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+
+                    setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000);
+                    isExporting = false;
+                    overlay.classList.add('hidden');
+                    showToast(`Berhasil mengunduh Klip #${clip.id} (${clip.duration} detik)!`, 'success');
+                };
+
+                // Start recording from beginning of clip
+                pausedElapsed = 0;
+                previewStartTime = performance.now();
+                if (currentInputMode === 'upload') {
+                    videoEl.currentTime = clip.startTime;
+                    await videoEl.play().catch(() => {});
+                }
+
+                recorder.start(200);
+
+                // Record for exact clip duration (or capped speed simulation if user wants real-time capture)
+                // We record the genuine clip duration (30s - 60s) so the downloaded file truly has 30s-60s duration!
+                const totalMs = clip.duration * 1000;
+                const exportStart = performance.now();
+
+                const trackExport = setInterval(() => {
+                    const elapsedMs = performance.now() - exportStart;
+                    const pct = Math.min(100, Math.round((elapsedMs / totalMs) * 100));
+                    progressBar.style.width = `${pct}%`;
+                    percentText.textContent = `${pct}% (${Math.ceil((totalMs - elapsedMs) / 1000)}s tersisa)`;
+                    statusText.textContent = `Merekam stream video ${clip.duration} detik (${selectedRatio})...`;
+
+                    if (elapsedMs >= totalMs) {
+                        clearInterval(trackExport);
+                        if (recorder.state !== 'inactive') {
+                            recorder.stop();
+                        }
+                    }
+                }, 200);
+
+            } catch (err) {
+                console.error(err);
+                isExporting = false;
+                overlay.classList.add('hidden');
+                showToast('Gagal mengekspor video di browser ini. Coba gunakan Chrome/Edge terbaru.', 'error');
+            }
+        }
+
+        // ==========================================
+        // MODAL & RESET CONTROLS
+        // ==========================================
+        function openBackendModal() {
+            document.getElementById('backend-modal').classList.remove('hidden');
+        }
+
+        function closeBackendModal() {
+            document.getElementById('backend-modal').classList.add('hidden');
+        }
+
+        function copyBackendCode() {
+            const codeText = document.getElementById('python-code-block').innerText;
+            const textarea = document.createElement('textarea');
+            textarea.value = codeText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            textarea.remove();
+            showToast('Kode Python yt-dlp + FFmpeg berhasil disalin!', 'success');
+        }
+
+        function resetApp() {
+            if (isExporting) return;
+            isPlaying = false;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            const videoEl = document.getElementById('source-video-element');
+            videoEl.pause();
+
+            document.getElementById('results-section').classList.add('hidden');
+            document.getElementById('loading-section').classList.add('hidden');
+            document.getElementById('setup-section').classList.remove('hidden');
+
+            // Reset checklist styles
+            ['step-1', 'step-2', 'step-3'].forEach((id, i) => {
+                const el = document.getElementById(id);
+                el.className = 'flex items-center gap-3 text-zinc-400';
+                el.querySelector('span').className = 'w-5 h-5 rounded-full bg-studio-800 flex items-center justify-center text-[10px]';
+                el.querySelector('span').textContent = i + 1;
+            });
+        }
+    </script>
+</body>
+</html>
+```
