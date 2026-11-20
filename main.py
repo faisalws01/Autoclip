@@ -6,13 +6,20 @@ def buat_klip_otomatis(url_video: str, mulai_detik: int = 15, durasi: int = 45, 
     temp_video = "source_temp.mp4"
 
     ydl_opts = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]',
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'outtmpl': temp_video,
-        'quiet': True
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web']
+            }
+        }
     }
 
-    if os.path.exists("cookies.txt"):
+    if os.path.exists("cookies.txt") and os.path.getsize("cookies.txt") > 10:
+        print("Menggunakan cookies.txt...")
         ydl_opts['cookiefile'] = "cookies.txt"
+    else:
+        print("PERINGATAN: cookies.txt tidak ditemukan atau kosong!")
 
     print(f"Mengunduh video dari: {url_video}...")
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -36,8 +43,8 @@ if __name__ == "__main__":
     url = os.environ.get("VIDEO_URL")
     mulai = int(os.environ.get("MULAI_DETIK", "15"))
     durasi = int(os.environ.get("DURASI", "45"))
-
+    
     if not url:
         raise ValueError("VIDEO_URL wajib diisi!")
-
+        
     buat_klip_otomatis(url_video=url, mulai_detik=mulai, durasi=durasi)
