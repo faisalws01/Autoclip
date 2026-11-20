@@ -35,14 +35,19 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
-          pip install yt-dlp
+          pip install -U yt-dlp
 
-      - name: Jalankan Script Pemotong Klip
+      - name: Siapkan Cookies & Jalankan Script
         env:
           VIDEO_URL: ${{ inputs.video_url }}
           MULAI_DETIK: ${{ inputs.mulai_detik }}
           DURASI: ${{ inputs.durasi }}
-        run: python main.py
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+        run: |
+          if [ -n "$YOUTUBE_COOKIES" ]; then
+            printf "%s\n" "$YOUTUBE_COOKIES" > cookies.txt
+          fi
+          python main.py
 
       - name: Upload Hasil Video (Artifact)
         uses: actions/upload-artifact@v4
