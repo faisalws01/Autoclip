@@ -1,0 +1,52 @@
+name: Auto Clip Generator
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_url:
+        description: 'URL Video (YouTube / TikTok / IG)'
+        required: true
+        type: string
+      mulai_detik:
+        description: 'Mulai pada detik ke-'
+        required: true
+        default: '15'
+        type: string
+      durasi:
+        description: 'Durasi klip (detik)'
+        required: true
+        default: '45'
+        type: string
+
+jobs:
+  generate-clip:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install FFmpeg & yt-dlp
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install yt-dlp
+
+      - name: Jalankan Script Pemotong Klip
+        env:
+          VIDEO_URL: ${{ inputs.video_url }}
+          MULAI_DETIK: ${{ inputs.mulai_detik }}
+          DURASI: ${{ inputs.durasi }}
+        run: python main.py
+
+      - name: Upload Hasil Video (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: klip-viral-9x16
+          path: klip_viral_9x16.mp4
+          retention-days: 7
